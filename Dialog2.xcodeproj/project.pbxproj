@@ -32,6 +32,8 @@
 		91D6F9940CF33A7A000F8170 /* TMDChameleon.mm in Sources */ = {isa = PBXBuildFile; fileRef = 91D6F9900CF33A7A000F8170 /* TMDChameleon.mm */; };
 		91D6F9950CF33A7A000F8170 /* ValueTransformers.mm in Sources */ = {isa = PBXBuildFile; fileRef = 91D6F9920CF33A7A000F8170 /* ValueTransformers.mm */; };
 		91D6F9960CF33A7A000F8170 /* window.mm in Sources */ = {isa = PBXBuildFile; fileRef = 91D6F9930CF33A7A000F8170 /* window.mm */; };
+		CAD7E01A0F12AC1200E67717 /* MenuWindowView.mm in Sources */ = {isa = PBXBuildFile; fileRef = CAD7E0180F12AC1200E67717 /* MenuWindowView.mm */; };
+		CAD7E2410F1A590300E67717 /* DocPopup.m in Sources */ = {isa = PBXBuildFile; fileRef = CAD7E23F0F1A590300E67717 /* DocPopup.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -84,6 +86,10 @@
 		91D6F9910CF33A7A000F8170 /* ValueTransformers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ValueTransformers.h; path = Commands/Utilities/ValueTransformers.h; sourceTree = "<group>"; };
 		91D6F9920CF33A7A000F8170 /* ValueTransformers.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = ValueTransformers.mm; path = Commands/Utilities/ValueTransformers.mm; sourceTree = "<group>"; };
 		91D6F9930CF33A7A000F8170 /* window.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = window.mm; path = Commands/window.mm; sourceTree = "<group>"; };
+		CAD7E0180F12AC1200E67717 /* MenuWindowView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = MenuWindowView.mm; path = Commands/ExtendedPopUp/MenuWindowView.mm; sourceTree = "<group>"; };
+		CAD7E0190F12AC1200E67717 /* MenuWindowView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MenuWindowView.h; path = Commands/ExtendedPopUp/MenuWindowView.h; sourceTree = "<group>"; };
+		CAD7E23F0F1A590300E67717 /* DocPopup.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = DocPopup.m; path = Commands/ExtendedPopUp/DocPopup.m; sourceTree = "<group>"; };
+		CAD7E2400F1A590300E67717 /* DocPopup.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DocPopup.h; path = Commands/ExtendedPopUp/DocPopup.h; sourceTree = "<group>"; };
 		D2F7E65807B2D6F200F64583 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
 /* End PBXFileReference section */
 
@@ -219,6 +225,10 @@
 		91D6F94E0CF2BCEC000F8170 /* ExtendedPopUp */ = {
 			isa = PBXGroup;
 			children = (
+				CAD7E23F0F1A590300E67717 /* DocPopup.m */,
+				CAD7E2400F1A590300E67717 /* DocPopup.h */,
+				CAD7E0180F12AC1200E67717 /* MenuWindowView.mm */,
+				CAD7E0190F12AC1200E67717 /* MenuWindowView.h */,
 				91D6F9560CF2BD16000F8170 /* extendedmenu.mm */,
 				91D6F9570CF2BD16000F8170 /* TMDIncrementalPopUpMenu.h */,
 				91D6F9590CF2BD16000F8170 /* TMDIncrementalPopUpMenu.mm */,
@@ -360,6 +370,8 @@
 				91234F960D9A84E900E346BA /* insert.mm in Sources */,
 				175614490EDEA3B80053AC52 /* images.mm in Sources */,
 				1756144D0EDEA96F0053AC52 /* defaults.mm in Sources */,
+				CAD7E01A0F12AC1200E67717 /* MenuWindowView.mm in Sources */,
+				CAD7E2410F1A590300E67717 /* DocPopup.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

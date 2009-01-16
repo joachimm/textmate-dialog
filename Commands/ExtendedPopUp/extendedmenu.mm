@@ -29,13 +29,20 @@
 	NSString* prefix     = [args objectForKey:@"staticPrefix"];
 	NSString* allow      = [args objectForKey:@"additionalWordCharacters"];
 	BOOL wait            = [args objectForKey:@"returnChoice"] ? YES : NO;
+	BOOL documented      = [args objectForKey:@"displayDocumentation"] ? YES : NO;
 	BOOL caseInsensitive = [args objectForKey:@"caseInsensitive"] ? YES : NO;
 	
 	NSArray* suggestions = [args objectForKey:@"suggestions"];
 	if([suggestions isKindOfClass:[NSString class]])
 		suggestions = [NSPropertyListSerialization propertyListFromData:[(NSString*)suggestions dataUsingEncoding:NSUTF8StringEncoding] mutabilityOption:NSPropertyListImmutable format:nil errorDescription:NULL];
 
-	TMDIncrementalPopUpMenu* xPopUp = [[TMDIncrementalPopUpMenu alloc] initWithItems:suggestions alreadyTyped:filter staticPrefix:prefix additionalWordCharacters:allow caseSensitive:!caseInsensitive writeChoiceToFileDescriptor:(wait ? [proxy outputHandle] : nil)];
+	TMDIncrementalPopUpMenu* xPopUp = [[TMDIncrementalPopUpMenu alloc] initWithItems:suggestions
+   alreadyTyped:filter
+   staticPrefix:prefix
+additionalWordCharacters:allow
+  caseSensitive:!caseInsensitive
+writeChoiceToFileDescriptor:(wait ? [proxy outputHandle] : nil)
+readHTMLFromFileDescriptor:(documented ? [proxy inputHandle]: nil)];
 
 	NSPoint pos = [NSEvent mouseLocation];
 	if(id textView = [NSApp targetForAction:@selector(positionForWindowUnderCaret)])

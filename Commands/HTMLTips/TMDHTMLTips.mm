@@ -36,11 +36,12 @@ const NSString* TMDTooltipPreferencesIdentifier = @"TM Tooltip";
 // ==================
 // = Setup/teardown =
 // ==================
-+ (void)showWithContent:(NSString*)content atLocation:(NSPoint)point transparent:(BOOL)transparent
++ (TMDHTMLTip*)showWithContent:(NSString*)content atLocation:(NSPoint)point transparent:(BOOL)transparent
 {
 	TMDHTMLTip* tip = [TMDHTMLTip new];
 	[tip setFrameTopLeftPoint:point];
 	[tip setContent:content transparent:transparent]; // The tooltip will show itself automatically when the HTML is loaded
+  return tip;
 }
 
 - (id)init;

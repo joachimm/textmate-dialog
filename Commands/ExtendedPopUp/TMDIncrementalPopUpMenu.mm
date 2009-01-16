@@ -8,6 +8,8 @@
 #import "../Utilities/TextMate.h" // -insertSnippetWithOptions
 #import "../../TMDCommand.h" // -writeString:
 #import "../../Dialog2.h"
+#import "MenuWindowView.h"
+#import <vector>
 
 @interface NSTableView (MovingSelectedRow)
 - (BOOL)TMDcanHandleEvent:(NSEvent*)anEvent;
@@ -56,6 +58,9 @@
 - (void)filter;
 - (void)insertCommonPrefix;
 - (void)completeAndInsertSnippet;
+- (void)startReadingDocs;
+- (void) stopProcess;
+- (void) closeHTMLPopup;
 @end
 
 @implementation TMDIncrementalPopUpMenu
@@ -67,6 +72,7 @@
 	if(self = [super initWithContentRect:NSZeroRect styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:NO])
 	{
 		mutablePrefix = [NSMutableString new];
+		htmlDocString = [NSMutableString new];
 		textualInputCharacters = [[NSMutableCharacterSet alphanumericCharacterSet] retain];
 		caseSensitive = YES;
 
@@ -79,6 +85,7 @@
 {
 	[staticPrefix release];
 	[mutablePrefix release];
+	[htmlDocString release];
 	[textualInputCharacters release];
 
 	[outputHandle release];
@@ -90,6 +97,7 @@
 }
 
 - (id)initWithItems:(NSArray*)someSuggestions alreadyTyped:(NSString*)aUserString staticPrefix:(NSString*)aStaticPrefix additionalWordCharacters:(NSString*)someAdditionalWordCharacters caseSensitive:(BOOL)isCaseSensitive writeChoiceToFileDescriptor:(NSFileHandle*)aFileDescriptor
+readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 {
 	if(self = [self init])
 	{
@@ -106,6 +114,8 @@
 
 		caseSensitive = isCaseSensitive;
 		outputHandle = [aFileDescriptor retain];
+		inputHandle = [readFrom retain];
+    [self startReadingDocs];
 	}
 	return self;
 }
@@ -116,7 +126,8 @@
 	isAbove = NO;
 	
 	NSRect mainScreen = [self rectOfMainScreen];
-	
+	[[self contentView] reloadData];
+
 	int offx = (caretPos.x/mainScreen.size.width) + 1;
 	if((caretPos.x + [self frame].size.width) > (mainScreen.size.width*offx))
 		caretPos.x = caretPos.x - [self frame].size.width;
@@ -131,37 +142,25 @@
 		caretPos.y = caretPos.y + ([self frame].size.height + [[NSUserDefaults standardUserDefaults] integerForKey:@"OakTextViewNormalFontSize"]*1.5);
 		isAbove = YES;
 	}
+	caretPos.x -= 25;
 	[self setFrameTopLeftPoint:caretPos];
 }
 
 - (void)setupInterface
 {
+	[self setBackgroundColor:[NSColor clearColor]];
+	[self setAlphaValue:1.0];
+	[self setOpaque:NO];
+	[self setAcceptsMouseMovedEvents:YES];
 	[self setReleasedWhenClosed:YES];
 	[self setLevel:NSStatusWindowLevel];
 	[self setHidesOnDeactivate:YES];
 	[self setHasShadow:YES];
 
-	NSScrollView* scrollView = [[[NSScrollView alloc] initWithFrame:NSZeroRect] autorelease];
-	[scrollView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-	[scrollView setAutohidesScrollers:YES];
-	[scrollView setHasVerticalScroller:YES];
-	[[scrollView verticalScroller] setControlSize:NSSmallControlSize];
-
-	theTableView = [[[NSTableView alloc] initWithFrame:NSZeroRect] autorelease];
-	[theTableView setFocusRingType:NSFocusRingTypeNone];
-	[theTableView setAllowsEmptySelection:NO];
-	[theTableView setHeaderView:nil];
-
-	NSTableColumn *column = [[[NSTableColumn alloc] initWithIdentifier:@"foo"] autorelease];
-	[column setDataCell:[NSClassFromString(@"OakImageAndTextCell") new]];
-	[column setEditable:NO];
-	[theTableView addTableColumn:column];
-	[column setWidth:[theTableView bounds].size.width];
-
-	[theTableView setDataSource:self];
-	[scrollView setDocumentView:theTableView];
-
-	[self setContentView:scrollView];
+	MenuWindowView* view = [[[MenuWindowView alloc] initWithDataSource:self] autorelease];
+	[view setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+  [view setDelegate:self];
+	[self setContentView:view];
 }
 
 // ========================
@@ -181,6 +180,111 @@
 	[[aTableColumn dataCell] setImage:image];
 
 	return [[filtered objectAtIndex:rowIndex] objectForKey:@"display"];
+}
+
+// =========================
+// = Menu delegate methods =
+// =========================
+
+- (void)viewDidChangeSelection
+{
+  NSMutableDictionary* selectedItem = [[[[self contentView] selectedItem] mutableCopy] autorelease];
+
+	if(selectedItem == nil)
+		return;
+		
+	if([selectedItem objectForKey:@"documented"]  && outputHandle)
+	{
+	  [outputHandle writeString:[selectedItem description]];
+    char c = 0;
+	  [outputHandle writeData:[NSData dataWithBytes: &c length: sizeof(char)]];
+
+	}
+
+}
+
+-(void) displayHTMLPopup:(NSString*)html
+{
+  [html retain];
+  NSPoint pos = [NSEvent mouseLocation];
+	[self closeHTMLPopup];
+	  
+htmlTooltip = [DocPopup showWithContent:html atLocation:pos transparent: NO];
+  [html release];
+}
+
+- (void)startReadingDocs
+{
+	[[NSNotificationCenter defaultCenter] addObserver:self 
+											 selector:@selector(getData:) 
+												 name: NSFileHandleReadCompletionNotification 
+											   object: inputHandle];
+	[inputHandle readInBackgroundAndNotify];
+}
+
+- (void) getData: (NSNotification *)aNotification
+{
+    NSData *data = [[aNotification userInfo] objectForKey:NSFileHandleNotificationDataItem];
+	// assuming there is no way to get zero length data unless EOF?
+    if ([data length])
+    {
+		int i = 0;
+		int index = -1;
+		int length = [data length]; 
+		char ch;
+		char* charArray = (char*) [data bytes];
+		while(i < length - 1) {
+			ch = charArray[i];
+			// if the null terminator is not at the end, assume that new data
+			// has been sent afterwards, and use that instead
+			if(ch == 0 || ch == 1){
+				index = i;
+			}
+			i++;
+		}
+        // data might not be null terminated so use
+        // -initWithData:encoding: 
+		NSString* html = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+		if(index != -1) {
+			
+			[htmlDocString setString:@""];
+
+			NSString* temp = html;
+			html = [html substringFromIndex:index + 1];
+			[temp release];
+		}
+		[htmlDocString appendString:html];
+		
+		// if the string is terminated with a 0 it is documentation
+		// ch is the last char in the input
+		if( charArray[length - 1] == 0 ){
+			[self displayHTMLPopup:htmlDocString];
+			[htmlDocString setString:@""];
+		// if the string is terminated with a 1 it is a snippet
+		} else if( charArray[length - 1] == 1 ){
+			[self stopProcess];
+			insert_snippet([htmlDocString substringToIndex:[data length]-1]);
+		} 
+		[html release];
+	}
+	// read more data    
+	[inputHandle readInBackgroundAndNotify];  
+}
+						  
+- (void) stopProcess
+{
+	[[NSNotificationCenter defaultCenter] removeObserver:self name:NSFileHandleReadCompletionNotification object: inputHandle];
+	[self closeHTMLPopup];
+	closeMe = YES;
+}
+
+-(void) closeHTMLPopup
+{
+	@synchronized(htmlTooltip){
+		if(htmlTooltip != nil){
+			[htmlTooltip close];
+		}
+	}
 }
 
 // ====================
@@ -205,43 +309,14 @@
 	{
 		newFiltered = suggestions;
 	}
-	NSPoint old = NSMakePoint([self frame].origin.x, [self frame].origin.y + [self frame].size.height);
-	
-	int displayedRows = [newFiltered count] < MAX_ROWS ? [newFiltered count] : MAX_ROWS;
-	float newHeight   = ([theTableView rowHeight] + [theTableView intercellSpacing].height) * displayedRows;
-	
-	float maxLen = 1;
-	NSString* item;
-	int i;
-	float maxWidth = [self frame].size.width;
-	if([newFiltered count]>0)
-	{
-		for(i=0; i<[newFiltered count]; i++)
-		{
-			item = [[newFiltered objectAtIndex:i] objectForKey:@"display"];
-			if([item length]>maxLen)
-				maxLen = [item length];
-		}
-		maxWidth = maxLen*18;
-		maxWidth = (maxWidth>340) ? 340 : maxWidth;
-	}
-	if(caretPos.y>=0 && (isAbove || caretPos.y<newHeight))
-	{
-		isAbove = YES;
-		old.y = caretPos.y + (newHeight + [[NSUserDefaults standardUserDefaults] integerForKey:@"OakTextViewNormalFontSize"]*1.5);
-	}
-	if(caretPos.y<0 && (isAbove || (mainScreen.size.height-newHeight)<(caretPos.y*-1)))
-	{
-		old.y = caretPos.y + (newHeight + [[NSUserDefaults standardUserDefaults] integerForKey:@"OakTextViewNormalFontSize"]*1.5);
-	}
-	
+
 	// newHeight is currently the new height for theTableView, but we need to resize the whole window
 	// so here we use the difference in height to find the new height for the window
 	// newHeight = [[self contentView] frame].size.height + (newHeight - [theTableView frame].size.height);
-	[self setFrame:NSMakeRect(old.x,old.y-newHeight,maxWidth,newHeight) display:YES];
 	[filtered release];
 	filtered = [newFiltered retain];
-	[theTableView reloadData];
+	//[theTableView reloadData];
+	[[self contentView] reloadData];
 }
 
 // =========================
@@ -289,7 +364,7 @@
 			continue;
 		
 		NSEventType t = [event type];
-		if([theTableView TMDcanHandleEvent:event])
+		if([[self contentView] TMDcanHandleEvent:event])
 		{
 			// skip the rest
 		}
@@ -358,7 +433,9 @@
 			[NSApp sendEvent:event];
 		}
 	}
+	[self closeHTMLPopup];
 	[self close];
+
 }
 
 // ==================
@@ -367,7 +444,7 @@
 
 - (void)insertCommonPrefix
 {
-	int row = [theTableView selectedRow];
+	int row = [[self contentView] selectedRow];
 	if(row == -1)
 		return;
 
@@ -405,10 +482,10 @@
 
 - (void)completeAndInsertSnippet
 {
-	if([theTableView selectedRow] == -1)
-		return;
+	NSMutableDictionary* selectedItem = [[[[self contentView] selectedItem] mutableCopy] autorelease];
 
-	NSMutableDictionary* selectedItem = [[[filtered objectAtIndex:[theTableView selectedRow]] mutableCopy] autorelease];
+	if(selectedItem == nil)
+		return;
 
 	NSString* candidateMatch = [selectedItem objectForKey:@"match"] ?: [selectedItem objectForKey:@"display"];
 	if([[self filterString] length] < [candidateMatch length])
@@ -417,15 +494,18 @@
 	if(outputHandle)
 	{
 		// We want to return the index of the selected item into the array which was passed in,
-		// but we can’t use the selected row index as the contents of the tablview is filtered down.
-		[selectedItem setObject:[NSNumber numberWithInt:[suggestions indexOfObject:[filtered objectAtIndex:[theTableView selectedRow]]]] forKey:@"index"];
+		// but we can’t use the selected row index as the contents of the tableview is filtered down.
+		[selectedItem setObject:[NSNumber numberWithInt:[suggestions indexOfObject:[filtered objectAtIndex:[[self contentView] selectedRow]]]] forKey:@"index"];
+		[selectedItem setObject:@"insertSnippet" forKey:@"callback"];
 		[outputHandle writeString:[selectedItem description]];
-	}
-	else if(NSString* toInsert = [selectedItem objectForKey:@"insert"])
+		char c = (char)0;
+		[outputHandle writeData:[NSData dataWithBytes: &c length: sizeof(char)]];
+		
+	} else if(NSString* toInsert = [selectedItem objectForKey:@"insert"])
 	{
 		insert_snippet(toInsert);
+		closeMe = YES;
 	}
 
-	closeMe = YES;
 }
 @end

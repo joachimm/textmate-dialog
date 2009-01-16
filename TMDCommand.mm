@@ -1,5 +1,6 @@
 #import "TMDCommand.h"
-
+#import "Dialog2.h"
+#import <vector>
 static NSMutableDictionary* Commands = nil;
 
 @implementation TMDCommand
@@ -22,13 +23,29 @@ static NSMutableDictionary* Commands = nil;
 
 + (id)readPropertyList:(NSFileHandle*)aFileHandle error:(NSString**)error;
 {
-	NSData* data = [aFileHandle readDataToEndOfFile];
+	//NSData* data = [aFileHandle readDataToEndOfFile];
+  NSData* data = [TMDCommand readDataUntilNullTerminator:aFileHandle];
 	if([data length] == 0)
 		return nil;
 
 	id plist = [NSPropertyListSerialization propertyListFromData:data mutabilityOption:NSPropertyListMutableContainersAndLeaves format:nil errorDescription:error];
 
 	return plist;
+}
+
++(NSData*)readDataUntilNullTerminator:(NSFileHandle*)aFileHandle
+{
+	NSMutableData* mutableData= [NSMutableData data];
+	NSData* data;
+	while((data = [aFileHandle availableData]) && ([data length] > 0)) 
+	{
+		[mutableData appendData:data];
+		int length = [data length];
+		if(( (char*) [data bytes] )[length - 1] == 0) {
+			break;
+		} 
+	}
+	return mutableData;
 }
 
 + (void)writePropertyList:(id)aPlist toFileHandle:(NSFileHandle*)aFileHandle
