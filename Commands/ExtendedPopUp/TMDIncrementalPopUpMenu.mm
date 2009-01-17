@@ -28,13 +28,13 @@
 		{ NSHomeFunctionKey,    -(INT_MAX >> 1) },
 		{ NSEndFunctionKey,     +(INT_MAX >> 1) },
 	};
-
+	
 	unichar keyCode = 0;
 	if([anEvent type] == NSScrollWheel)
 		keyCode = [anEvent deltaY] >= 0.0 ? NSUpArrowFunctionKey : NSDownArrowFunctionKey;
 	else if([anEvent type] == NSKeyDown && [[anEvent characters] length] == 1)
 		keyCode = [[anEvent characters] characterAtIndex:0];
-
+	
 	for(size_t i = 0; i < sizeofA(key_movements); ++i)
 	{
 		if(keyCode == key_movements[i].key)
@@ -42,11 +42,11 @@
 			int row = std::max(0, std::min([self selectedRow] + key_movements[i].rows, [self numberOfRows]-1));
 			[self selectRow:row byExtendingSelection:NO];
 			[self scrollRowToVisible:row];
-
+			
 			return YES;
 		}
 	}
-
+	
 	return NO;
 }
 @end
@@ -75,7 +75,7 @@
 		htmlDocString = [NSMutableString new];
 		textualInputCharacters = [[NSMutableCharacterSet alphanumericCharacterSet] retain];
 		caseSensitive = YES;
-
+		
 		[self setupInterface];	
 	}
 	return self;
@@ -87,12 +87,13 @@
 	[mutablePrefix release];
 	[htmlDocString release];
 	[textualInputCharacters release];
-
+	
 	[outputHandle release];
 	[suggestions release];
-
+	
 	[filtered release];
-
+	//[inputHandle release];
+	
 	[super dealloc];
 }
 
@@ -102,20 +103,22 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 	if(self = [self init])
 	{
 		suggestions = [someSuggestions retain];
-
+		
 		if(aUserString)
 			[mutablePrefix appendString:aUserString];
-
+		
 		if(aStaticPrefix)
 			staticPrefix = [aStaticPrefix retain];
-
+		
 		if(someAdditionalWordCharacters)
 			[textualInputCharacters addCharactersInString:someAdditionalWordCharacters];
-
+		
 		caseSensitive = isCaseSensitive;
 		outputHandle = [aFileDescriptor retain];
-		inputHandle = [readFrom retain];
-    [self startReadingDocs];
+		if(readFrom) {
+			inputHandle = [readFrom retain];
+			[self startReadingDocs];
+		}
 	}
 	return self;
 }
@@ -127,7 +130,7 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 	
 	NSRect mainScreen = [self rectOfMainScreen];
 	[[self contentView] reloadData];
-
+	
 	int offx = (caretPos.x/mainScreen.size.width) + 1;
 	if((caretPos.x + [self frame].size.width) > (mainScreen.size.width*offx))
 		caretPos.x = caretPos.x - [self frame].size.width;
@@ -156,10 +159,10 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 	[self setLevel:NSStatusWindowLevel];
 	[self setHidesOnDeactivate:YES];
 	[self setHasShadow:YES];
-
+	
 	MenuWindowView* view = [[[MenuWindowView alloc] initWithDataSource:self] autorelease];
 	[view setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-  [view setDelegate:self];
+	[view setDelegate:self];
 	[self setContentView:view];
 }
 
@@ -178,7 +181,7 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 	if(NSString* imageName = [[filtered objectAtIndex:rowIndex] objectForKey:@"image"])
 		image = [NSImage imageNamed:imageName];
 	[[aTableColumn dataCell] setImage:image];
-
+	
 	return [[filtered objectAtIndex:rowIndex] objectForKey:@"display"];
 }
 
@@ -188,29 +191,30 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 
 - (void)viewDidChangeSelection
 {
-  NSMutableDictionary* selectedItem = [[[[self contentView] selectedItem] mutableCopy] autorelease];
-
+	NSMutableDictionary* selectedItem = [[(NSMutableDictionary*)[[self contentView] selectedItem] mutableCopy] autorelease];
+	
 	if(selectedItem == nil)
 		return;
-		
-	if([selectedItem objectForKey:@"documented"]  && outputHandle)
+	// unless we have an input handle, writing on the outputHandle is pointless, 
+	// since we won't get anything in return.
+	if([selectedItem objectForKey:@"documented"]  && outputHandle && inputHandle)
 	{
-	  [outputHandle writeString:[selectedItem description]];
-    char c = 0;
-	  [outputHandle writeData:[NSData dataWithBytes: &c length: sizeof(char)]];
-
+		[outputHandle writeString:[selectedItem description]];
+		char c = 0;
+		[outputHandle writeData:[NSData dataWithBytes: &c length: sizeof(char)]];
+		
 	}
-
+	
 }
 
 -(void) displayHTMLPopup:(NSString*)html
 {
-  [html retain];
-  NSPoint pos = [NSEvent mouseLocation];
+	[html retain];
+	NSPoint pos = [NSEvent mouseLocation];
 	[self closeHTMLPopup];
-	  
-htmlTooltip = [DocPopup showWithContent:html atLocation:pos transparent: NO];
-  [html release];
+	
+	htmlTooltip = [DocPopup showWithContent:html atLocation:pos transparent: NO];
+	[html release];
 }
 
 - (void)startReadingDocs
@@ -248,7 +252,7 @@ htmlTooltip = [DocPopup showWithContent:html atLocation:pos transparent: NO];
 		if(index != -1) {
 			
 			[htmlDocString setString:@""];
-
+			
 			NSString* temp = html;
 			html = [html substringFromIndex:index + 1];
 			[temp release];
@@ -260,7 +264,7 @@ htmlTooltip = [DocPopup showWithContent:html atLocation:pos transparent: NO];
 		if( charArray[length - 1] == 0 ){
 			[self displayHTMLPopup:htmlDocString];
 			[htmlDocString setString:@""];
-		// if the string is terminated with a 1 it is a snippet
+			// if the string is terminated with a 1 it is a snippet
 		} else if( charArray[length - 1] == 1 ){
 			[self stopProcess];
 			insert_snippet([htmlDocString substringToIndex:[data length]-1]);
@@ -270,7 +274,7 @@ htmlTooltip = [DocPopup showWithContent:html atLocation:pos transparent: NO];
 	// read more data    
 	[inputHandle readInBackgroundAndNotify];  
 }
-						  
+
 - (void) stopProcess
 {
 	[[NSNotificationCenter defaultCenter] removeObserver:self name:NSFileHandleReadCompletionNotification object: inputHandle];
@@ -309,7 +313,7 @@ htmlTooltip = [DocPopup showWithContent:html atLocation:pos transparent: NO];
 	{
 		newFiltered = suggestions;
 	}
-
+	
 	// newHeight is currently the new height for theTableView, but we need to resize the whole window
 	// so here we use the difference in height to find the new height for the window
 	// newHeight = [[self contentView] frame].size.height + (newHeight - [theTableView frame].size.height);
@@ -356,10 +360,10 @@ htmlTooltip = [DocPopup showWithContent:html atLocation:pos transparent: NO];
 	while(!closeMe)
 	{
 		NSEvent* event = [NSApp nextEventMatchingMask:NSAnyEventMask
-                                          untilDate:[NSDate distantFuture]
-                                             inMode:NSDefaultRunLoopMode
-                                            dequeue:YES];
-
+											untilDate:[NSDate distantFuture]
+											   inMode:NSDefaultRunLoopMode
+											  dequeue:YES];
+		
 		if(!event)
 			continue;
 		
@@ -390,7 +394,7 @@ htmlTooltip = [DocPopup showWithContent:html atLocation:pos transparent: NO];
 				[NSApp sendEvent:event];
 				if([mutablePrefix length] == 0)
 					break;
-
+				
 				[mutablePrefix deleteCharactersInRange:NSMakeRange([mutablePrefix length]-1, 1)];
 				[self filter];
 			}
@@ -435,7 +439,7 @@ htmlTooltip = [DocPopup showWithContent:html atLocation:pos transparent: NO];
 	}
 	[self closeHTMLPopup];
 	[self close];
-
+	
 }
 
 // ==================
@@ -447,7 +451,7 @@ htmlTooltip = [DocPopup showWithContent:html atLocation:pos transparent: NO];
 	int row = [[self contentView] selectedRow];
 	if(row == -1)
 		return;
-
+	
 	id cur = [filtered objectAtIndex:row];
 	NSString* curMatch = [cur objectForKey:@"match"] ?: [cur objectForKey:@"display"];
 	if([[self filterString] length] + 1 < [curMatch length])
@@ -461,11 +465,11 @@ htmlTooltip = [DocPopup showWithContent:html atLocation:pos transparent: NO];
 			if([candidateMatch hasPrefix:prefix])
 				[candidates addObject:candidateMatch];
 		}
-
+		
 		NSString* commonPrefix = curMatch;
 		enumerate(candidates, NSString* candidateMatch)
-			commonPrefix = [commonPrefix commonPrefixWithString:candidateMatch options:NSLiteralSearch];
-
+		commonPrefix = [commonPrefix commonPrefixWithString:candidateMatch options:NSLiteralSearch];
+		
 		if([[self filterString] length] < [commonPrefix length])
 		{
 			NSString* toInsert = [commonPrefix substringFromIndex:[[self filterString] length]];
@@ -482,30 +486,36 @@ htmlTooltip = [DocPopup showWithContent:html atLocation:pos transparent: NO];
 
 - (void)completeAndInsertSnippet
 {
-	NSMutableDictionary* selectedItem = [[[[self contentView] selectedItem] mutableCopy] autorelease];
-
+	NSMutableDictionary* selectedItem = [[(NSMutableDictionary*)[[self contentView] selectedItem] mutableCopy] autorelease];
+	
 	if(selectedItem == nil)
 		return;
-
+	
 	NSString* candidateMatch = [selectedItem objectForKey:@"match"] ?: [selectedItem objectForKey:@"display"];
 	if([[self filterString] length] < [candidateMatch length])
 		insert_text([candidateMatch substringFromIndex:[[self filterString] length]]);
-
+	
 	if(outputHandle)
 	{
 		// We want to return the index of the selected item into the array which was passed in,
 		// but we can’t use the selected row index as the contents of the tableview is filtered down.
 		[selectedItem setObject:[NSNumber numberWithInt:[suggestions indexOfObject:[filtered objectAtIndex:[[self contentView] selectedRow]]]] forKey:@"index"];
-		[selectedItem setObject:@"insertSnippet" forKey:@"callback"];
-		[outputHandle writeString:[selectedItem description]];
-		char c = (char)0;
-		[outputHandle writeData:[NSData dataWithBytes: &c length: sizeof(char)]];
+		if(inputHandle){
+			[selectedItem setObject:@"insertSnippet" forKey:@"callback"];
+			[outputHandle writeString:[selectedItem description]];
+			char c = (char)0;
+			[outputHandle writeData:[NSData dataWithBytes: &c length: sizeof(char)]];
+		} else {
+			[outputHandle writeString:[selectedItem description]];
+			closeMe = YES;
+		}
+		
 		
 	} else if(NSString* toInsert = [selectedItem objectForKey:@"insert"])
 	{
 		insert_snippet(toInsert);
 		closeMe = YES;
 	}
-
+	
 }
 @end
