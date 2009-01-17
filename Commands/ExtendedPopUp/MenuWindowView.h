@@ -30,4 +30,6 @@
 - (NSArray*)items;
 - (id)delegate;
 - (void)setDelegate:(id)del;
+- (BOOL)TMDcanHandleEvent:(NSEvent*)anEvent;
+- (void) arrangeInitialSelection;
 @end

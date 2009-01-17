@@ -11,45 +11,7 @@
 #import "MenuWindowView.h"
 #import <vector>
 
-@interface NSTableView (MovingSelectedRow)
-- (BOOL)TMDcanHandleEvent:(NSEvent*)anEvent;
-@end
 
-@implementation NSTableView (MovingSelectedRow)
-- (BOOL)TMDcanHandleEvent:(NSEvent*)anEvent
-{
-	int visibleRows = (int)floorf(NSHeight([self visibleRect]) / ([self rowHeight]+[self intercellSpacing].height)) - 1;
-	struct { unichar key; int rows; } const key_movements[] =
-	{
-		{ NSUpArrowFunctionKey,              -1 },
-		{ NSDownArrowFunctionKey,            +1 },
-		{ NSPageUpFunctionKey,     -visibleRows },
-		{ NSPageDownFunctionKey,   +visibleRows },
-		{ NSHomeFunctionKey,    -(INT_MAX >> 1) },
-		{ NSEndFunctionKey,     +(INT_MAX >> 1) },
-	};
-	
-	unichar keyCode = 0;
-	if([anEvent type] == NSScrollWheel)
-		keyCode = [anEvent deltaY] >= 0.0 ? NSUpArrowFunctionKey : NSDownArrowFunctionKey;
-	else if([anEvent type] == NSKeyDown && [[anEvent characters] length] == 1)
-		keyCode = [[anEvent characters] characterAtIndex:0];
-	
-	for(size_t i = 0; i < sizeofA(key_movements); ++i)
-	{
-		if(keyCode == key_movements[i].key)
-		{
-			int row = std::max(0, std::min([self selectedRow] + key_movements[i].rows, [self numberOfRows]-1));
-			[self selectRow:row byExtendingSelection:NO];
-			[self scrollRowToVisible:row];
-			
-			return YES;
-		}
-	}
-	
-	return NO;
-}
-@end
 
 @interface TMDIncrementalPopUpMenu (Private)
 - (NSRect)rectOfMainScreen;
@@ -61,6 +23,7 @@
 - (void)startReadingDocs;
 - (void) stopProcess;
 - (void) closeHTMLPopup;
+-(void) writeNullTerminatedString:(NSString*)string;
 @end
 
 @implementation TMDIncrementalPopUpMenu
@@ -92,7 +55,7 @@
 	[suggestions release];
 	
 	[filtered release];
-	//[inputHandle release];
+	[inputHandle release];
 	
 	[super dealloc];
 }
@@ -119,6 +82,7 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 			inputHandle = [readFrom retain];
 			[self startReadingDocs];
 		}
+		[[self contentView] arrangeInitialSelection];
 	}
 	return self;
 }
@@ -166,25 +130,6 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 	[self setContentView:view];
 }
 
-// ========================
-// = TableView DataSource =
-// ========================
-
-- (int)numberOfRowsInTableView:(NSTableView *)aTableView
-{
-	return [filtered count];
-}
-
-- (id)tableView:(NSTableView *)aTableView objectValueForTableColumn:(NSTableColumn *)aTableColumn row:(int)rowIndex
-{
-	NSImage* image = nil;
-	if(NSString* imageName = [[filtered objectAtIndex:rowIndex] objectForKey:@"image"])
-		image = [NSImage imageNamed:imageName];
-	[[aTableColumn dataCell] setImage:image];
-	
-	return [[filtered objectAtIndex:rowIndex] objectForKey:@"display"];
-}
-
 // =========================
 // = Menu delegate methods =
 // =========================
@@ -197,23 +142,31 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 		return;
 	// unless we have an input handle, writing on the outputHandle is pointless, 
 	// since we won't get anything in return.
-	if([selectedItem objectForKey:@"documented"]  && outputHandle && inputHandle)
+	if(outputHandle && inputHandle)
 	{
-		[outputHandle writeString:[selectedItem description]];
+		[self writeNullTerminatedString:[selectedItem description]];
+	}
+}
+
+-(void) writeNullTerminatedString:(NSString*)string
+{
+	@synchronized(outputHandle){
+		[outputHandle writeString:string];
 		char c = 0;
 		[outputHandle writeData:[NSData dataWithBytes: &c length: sizeof(char)]];
-		
 	}
-	
 }
 
 -(void) displayHTMLPopup:(NSString*)html
 {
 	[html retain];
-	NSPoint pos = [NSEvent mouseLocation];
+	NSPoint pos = caretPos;
+	pos.x = pos.x + [self frame].size.width + 5;
 	[self closeHTMLPopup];
-	
-	htmlTooltip = [DocPopup showWithContent:html atLocation:pos transparent: NO];
+	@synchronized(htmlTooltip){
+	if(![html isEqualToString:@""])
+	  htmlTooltip = [DocPopup showWithContent:html atLocation:pos transparent: NO];
+	}
 	[html release];
 }
 
@@ -248,15 +201,13 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 		}
         // data might not be null terminated so use
         // -initWithData:encoding: 
-		NSString* html = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+		
 		if(index != -1) {
-			
+			index++; // we want to start at the positon after index
+			data = [NSData dataWithBytes: (charArray + index ) length:length - index];
 			[htmlDocString setString:@""];
-			
-			NSString* temp = html;
-			html = [html substringFromIndex:index + 1];
-			[temp release];
 		}
+		NSString* html =  [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
 		[htmlDocString appendString:html];
 		
 		// if the string is terminated with a 0 it is documentation
@@ -368,7 +319,7 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 			continue;
 		
 		NSEventType t = [event type];
-		if([[self contentView] TMDcanHandleEvent:event])
+		if([(MenuWindowView*)[self contentView] TMDcanHandleEvent:event])
 		{
 			// skip the rest
 		}
@@ -502,9 +453,7 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 		[selectedItem setObject:[NSNumber numberWithInt:[suggestions indexOfObject:[filtered objectAtIndex:[[self contentView] selectedRow]]]] forKey:@"index"];
 		if(inputHandle){
 			[selectedItem setObject:@"insertSnippet" forKey:@"callback"];
-			[outputHandle writeString:[selectedItem description]];
-			char c = (char)0;
-			[outputHandle writeData:[NSData dataWithBytes: &c length: sizeof(char)]];
+			[self writeNullTerminatedString:[selectedItem description]];
 		} else {
 			[outputHandle writeString:[selectedItem description]];
 			closeMe = YES;

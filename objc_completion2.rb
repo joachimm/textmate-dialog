@@ -604,27 +604,34 @@ class ObjCMethodCompletion
 
   def generateOBJCDocumentation
     lambda do |selection|
+      begin
+        docset_cmd = "/Developer/usr/bin/docsetutil search -skip-text -query "
+        docset =  "/Developer/Documentation/DocSets/com.apple.ADC_Reference_Library.CoreReference.docset"
+        methodName = selection["cand"].split("\t")[0]
+        object = selection["cand"].split("\t")[3].match(/^[^;]+/)[0]
 
-      docset_cmd = "/Developer/usr/bin/docsetutil search -skip-text -query "
-      docset =  "/Developer/Documentation/DocSets/com.apple.ADC_Reference_Library.CoreReference.docset"
-      methodName = selection["cand"].split("\t")[0]
-      object = selection["cand"].split("\t")[3].match(/^[^;]+/)[0]
 
 
+        cmd = docset_cmd + methodName + ' ' + docset
+        result = `#{cmd}`
+        firstLine = result.split("\n")[0]
+        urlPart = firstLine.split[1]
+        path, anchor = urlPart.split("\#")
 
-      cmd = docset_cmd + methodName + ' ' + docset
-      result = `#{cmd}`
-      firstLine = result.split("\n")[0]
-      urlPart = firstLine.split[1]
-      path, anchor = urlPart.split("\#")
+        url = docset + "/Contents/Resources/Documents/" + path
 
-      url = docset + "/Contents/Resources/Documents/" + path
-
-      str = open(url, "r").read
-      searchTerm = "<a name=\"#{anchor}\""
-      startIndex = str.index(searchTerm)
-      endIndex = str.index("<a name=\"//apple_ref/occ/", startIndex + searchTerm.length)
-      str[startIndex...endIndex]
+        str = open(url, "r").read
+        searchTerm = "<a name=\"#{anchor}\""
+        startIndex = str.index(searchTerm)
+        endIndex = str.index("<a name=\"//apple_ref/occ/", startIndex + searchTerm.length)
+        unless(startIndex && endIndex )
+          return nil
+        else
+          return str[startIndex...endIndex]
+        end
+      rescue
+        return "error when generating documentation"
+      end
     end
   end
 

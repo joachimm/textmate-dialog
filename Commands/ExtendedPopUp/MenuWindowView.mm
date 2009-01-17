@@ -347,6 +347,12 @@ int cap (int min, int val, int max)
 	return selectedItem;
 }
 
+- (void) arrangeInitialSelection
+{
+	selectedItem = [[self items] objectAtIndex:0];
+	[self setNeedsDisplay:YES];
+}
+
 // =========
 // = Mouse =
 // =========

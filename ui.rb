@@ -101,57 +101,33 @@ module TextMate
       end
       
       def handleSelections(io, docTool, block)
-        cont = true
         r = nil
-        to_insert = nil
-        loopc = 0;
-          begin
+        begin
           line = io.each("\000") do |l|
-            file = open("/Users/joachimm/whatIsLove.txt","w+")
-            file.puts l.inspect
-            file.puts(loopc += 1)
-            file.close
             r = OSX::PropertyList.load l[0...-1]
-            
             if r.has_key?("callback")
-  
               to_insert = block.call(r).to_s
-              cont = false
-              # Insert the snippet if necessary
-              #io.close_write
-              file = open("/Users/joachimm/insertSnippet.txt","w+")
-              file.puts r.inspect
-              file.puts to_insert
-              file.close
               io.write to_insert
               io.putc 1;
             else
               text = docTool.call(r)
-              begin
-                io.write "<pre>#{ text } </pre>"
-                io.putc 0
-              rescue Exception => e
-                file = open("/Users/joachimm/innerExceptionHandleSelection.txt","w+")
-                file.puts "Error: #{e.class} => #{e}"
-                file.puts "---"
-                #file.puts text
-                file.puts e.backtrace
-                file.puts r.inspect
-                file.close
-
-              end 
+              if text
+                io.write "<pre>#{ text } </pre>" 
+              else
+                                io.putc 0
+              end
+                              io.putc 0
             end
           end
 
-          rescue Exception => e
-            file = open("/Users/joachimm/exceptionHandleSelection.txt","w+")
-            file.puts "hello"
-            file.puts e.backtrace
-            file.puts "Error: #{e.class} => #{e}"
-            file.puts r.inspect
-            file.close
-          end
-          #io.close
+        rescue Exception => e
+          file = open(ENV["HOME"] + "exceptionHandleSelection.txt","w+")
+          file.puts e.backtrace
+          file.puts "Error: #{e.class} => #{e}"
+          file.puts r.inspect
+          file.close
+        end
+        #io.close
       end
       
       # Interactive Code Completion Selector
