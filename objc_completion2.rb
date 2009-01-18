@@ -337,7 +337,8 @@ class ObjCFallbackCompletion
       flags[:extra_chars]= '_'
       flags[:initial_filter]= searchTerm
       begin
-        TextMate::UI.complete(pl, flags)  do |hash| 
+        
+        TextMate::UI.complete(pl, flags, nil)  do |hash|           
           es = ExternalSnippetizer.new({:star => star,
                :arg_name => arg_name,
                :tm_C_pointer => ENV['TM_C_POINTER']})

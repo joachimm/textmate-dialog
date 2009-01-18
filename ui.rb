@@ -185,14 +185,14 @@ module TextMate
               command << " --displayDocumentation"
               ::IO.popen(command, 'w+') do |io|
                 io << ( plist.to_plist + "\0")
-                #io.putc 0
                 to_insert = handleSelections(io, docTool, block)
               end
             else
               ::IO.popen(command, 'w+') do |io|
                 io << plist.to_plist
                 io.close_write
-                result = OSX::PropertyList.load io rescue nil
+
+                result = OSX::PropertyList.load io rescue nil 
               end
             end
           else
@@ -213,11 +213,13 @@ module TextMate
             choice ? choice['insert'] : nil
           end
 
-          # The block should return the text to insert as a snippet
-          to_insert << block.call(result).to_s
+          unless docTool
+            # The block should return the text to insert as a snippet
+            to_insert << block.call(result).to_s
+            # Insert the snippet if necessary
 
-          # Insert the snippet if necessary
-          #{}`"$DIALOG" x-insert --snippet #{e_sh to_insert}` unless to_insert.empty?
+            `"$DIALOG" x-insert --snippet #{e_sh to_insert}` unless to_insert.empty?
+          end
         end
       end
       
