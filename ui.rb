@@ -112,7 +112,7 @@ module TextMate
             else
               text = docTool.call(r)
               if text
-                io.write "<pre>#{ text } </pre>" 
+                io.write "<pre>#{ text }</pre>" 
               else
                                 io.putc 0
               end

@@ -179,7 +179,7 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 	[inputHandle readInBackgroundAndNotify];
 }
 
-- (void) getData: (NSNotification *)aNotification
+- (void) getData: (NSNotification*)aNotification
 {
     NSData *data = [[aNotification userInfo] objectForKey:NSFileHandleNotificationDataItem];
 	// assuming there is no way to get zero length data unless EOF?
@@ -206,21 +206,28 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 			index++; // we want to start at the positon after index
 			data = [NSData dataWithBytes: (charArray + index ) length:length - index];
 			[htmlDocString setString:@""];
+
 		}
-		NSString* html =  [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-		[htmlDocString appendString:html];
+		// it seems that NSString#initWithData:encoding:
+		// does not give an empty string when data is -> char* data[1]; data[0]=0;
+		if([data length] == 1 && *charArray == 0 && [htmlDocString length] == 0){
+			[self closeHTMLPopup];
+		} else {
+			NSString* html =  [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+			[htmlDocString appendString:html];
 		
-		// if the string is terminated with a 0 it is documentation
-		// ch is the last char in the input
-		if( charArray[length - 1] == 0 ){
-			[self displayHTMLPopup:htmlDocString];
-			[htmlDocString setString:@""];
-			// if the string is terminated with a 1 it is a snippet
-		} else if( charArray[length - 1] == 1 ){
-			[self stopProcess];
-			insert_snippet([htmlDocString substringToIndex:[data length]-1]);
-		} 
-		[html release];
+			// if the string is terminated with a 0 it is documentation
+			// ch is the last char in the input
+			if( charArray[length - 1] == 0 ){
+				[self displayHTMLPopup:htmlDocString];
+				[htmlDocString setString:@""];
+				// if the string is terminated with a 1 it is a snippet
+			} else if( charArray[length - 1] == 1 ){
+				[self stopProcess];
+				insert_snippet([htmlDocString substringToIndex:[data length]-1]);
+			} 
+			[html release];
+		}
 	}
 	// read more data    
 	[inputHandle readInBackgroundAndNotify];  
