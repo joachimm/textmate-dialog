@@ -24,6 +24,7 @@
 - (void)stopProcess;
 - (void)closeHTMLPopup;
 - (void)writeNullTerminatedString:(NSString*)string;
+- (void)setFiltered:(NSArray*)array;
 @end
 
 @implementation TMDIncrementalPopUpMenu
@@ -148,14 +149,9 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 	}
 }
 
-- (void)writeNullTerminatedString:(NSString*)string
-{
-	@synchronized(outputHandle){
-		[outputHandle writeString:string];
-		char c = 0;
-		[outputHandle writeData:[NSData dataWithBytes: &c length: sizeof(char)]];
-	}
-}
+// =======================
+// = HTML Popup handling =
+// =======================
 
 - (void)displayHTMLPopup:(NSString*)html
 {
@@ -168,6 +164,19 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 	}
 	[html release];
 }
+
+- (void)closeHTMLPopup
+{
+	@synchronized(htmlTooltip){
+		if(htmlTooltip != nil){
+			[htmlTooltip close];
+		}
+	}
+}
+
+// ===========
+// = Pipeing =
+// ===========
 
 - (void)startReadingDocs
 {
@@ -239,15 +248,6 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 	closeMe = YES;
 }
 
-- (void)closeHTMLPopup
-{
-	@synchronized(htmlTooltip){
-		if(htmlTooltip != nil){
-			[htmlTooltip close];
-		}
-	}
-}
-
 // ====================
 // = Filter the items =
 // ====================
@@ -270,16 +270,18 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 	{
 		newFiltered = suggestions;
 	}
-	
-	// newHeight is currently the new height for theTableView, but we need to resize the whole window
-	// so here we use the difference in height to find the new height for the window
-	// newHeight = [[self contentView] frame].size.height + (newHeight - [theTableView frame].size.height);
-	[filtered release];
-	filtered = [newFiltered retain];
+
+	[self setFiltered:newFiltered];
 	//[theTableView reloadData];
 	[[self contentView] reloadData];
 }
 
+- (void)setFiltered:(NSArray*)array
+{
+	id oldThing = filtered;
+	filtered = [array retain];
+	[oldThing release];
+}
 // =========================
 // = Convenience functions =
 // =========================
@@ -298,6 +300,15 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 			mainScreen = [candidate frame];
 	}
 	return mainScreen;
+}
+
+- (void)writeNullTerminatedString:(NSString*)string
+{
+	@synchronized(outputHandle){
+		[outputHandle writeString:string];
+		char c = 0;
+		[outputHandle writeData:[NSData dataWithBytes: &c length: sizeof(char)]];
+	}
 }
 
 // =============================
