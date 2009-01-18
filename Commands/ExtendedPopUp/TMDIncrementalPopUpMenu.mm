@@ -21,9 +21,9 @@
 - (void)insertCommonPrefix;
 - (void)completeAndInsertSnippet;
 - (void)startReadingDocs;
-- (void) stopProcess;
-- (void) closeHTMLPopup;
--(void) writeNullTerminatedString:(NSString*)string;
+- (void)stopProcess;
+- (void)closeHTMLPopup;
+- (void)writeNullTerminatedString:(NSString*)string;
 @end
 
 @implementation TMDIncrementalPopUpMenu
@@ -148,7 +148,7 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 	}
 }
 
--(void) writeNullTerminatedString:(NSString*)string
+- (void)writeNullTerminatedString:(NSString*)string
 {
 	@synchronized(outputHandle){
 		[outputHandle writeString:string];
@@ -157,14 +157,13 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 	}
 }
 
--(void) displayHTMLPopup:(NSString*)html
+- (void)displayHTMLPopup:(NSString*)html
 {
 	[html retain];
 	NSPoint pos = caretPos;
 	pos.x = pos.x + [self frame].size.width + 5;
 	[self closeHTMLPopup];
 	@synchronized(htmlTooltip){
-	if(![html isEqualToString:@""])
 	  htmlTooltip = [DocPopup showWithContent:html atLocation:pos transparent: NO];
 	}
 	[html release];
@@ -179,7 +178,7 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 	[inputHandle readInBackgroundAndNotify];
 }
 
-- (void) getData: (NSNotification*)aNotification
+- (void)getData: (NSNotification*)aNotification
 {
     NSData *data = [[aNotification userInfo] objectForKey:NSFileHandleNotificationDataItem];
 	// assuming there is no way to get zero length data unless EOF?
@@ -233,14 +232,14 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 	[inputHandle readInBackgroundAndNotify];  
 }
 
-- (void) stopProcess
+- (void)stopProcess
 {
 	[[NSNotificationCenter defaultCenter] removeObserver:self name:NSFileHandleReadCompletionNotification object: inputHandle];
 	[self closeHTMLPopup];
 	closeMe = YES;
 }
 
--(void) closeHTMLPopup
+- (void)closeHTMLPopup
 {
 	@synchronized(htmlTooltip){
 		if(htmlTooltip != nil){

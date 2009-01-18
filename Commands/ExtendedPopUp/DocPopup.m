@@ -18,7 +18,7 @@
 	return tip;
 }
 
--(id)init
+- (id)init
 {
     if( (self = [super init]) ) {
 

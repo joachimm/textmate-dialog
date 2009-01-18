@@ -14,10 +14,10 @@
 #define TEXT_INDENT 25
 
 CGRect NSRectToCGRect(NSRect nsrect) {
-   return (*(CGRect *)&(nsrect));
+	return (*(CGRect *)&(nsrect));
 }
 NSRect NSRectFromCGRect(CGRect cgrect) {
-   return (*(NSRect *)&(cgrect));
+	return (*(NSRect *)&(cgrect));
 }
 
 int cap (int min, int val, int max)
@@ -34,10 +34,10 @@ int cap (int min, int val, int max)
 - (CGPathRef)quartzPath
 {
 	int i, numElements;
-
+	
 	// Need to begin a path here.
 	CGPathRef           immutablePath = NULL;
-
+	
 	// Then draw the path elements.
 	numElements = [self elementCount];
 	if (numElements > 0)
@@ -45,42 +45,42 @@ int cap (int min, int val, int max)
 		CGMutablePathRef    path = CGPathCreateMutable();
 		NSPoint             points[3];
 		BOOL                didClosePath = YES;
-
+		
 		for (i = 0; i < numElements; i++)
 		{
 			switch ([self elementAtIndex:i associatedPoints:points])
 			{
 				case NSMoveToBezierPathElement:
-				CGPathMoveToPoint(path, NULL, points[0].x, points[0].y);
-				break;
-
+					CGPathMoveToPoint(path, NULL, points[0].x, points[0].y);
+					break;
+					
 				case NSLineToBezierPathElement:
-				CGPathAddLineToPoint(path, NULL, points[0].x, points[0].y);
-				didClosePath = NO;
-				break;
-
+					CGPathAddLineToPoint(path, NULL, points[0].x, points[0].y);
+					didClosePath = NO;
+					break;
+					
 				case NSCurveToBezierPathElement:
-				CGPathAddCurveToPoint(path, NULL, points[0].x, points[0].y,
-					points[1].x, points[1].y,
-					points[2].x, points[2].y);
-				didClosePath = NO;
-				break;
-
+					CGPathAddCurveToPoint(path, NULL, points[0].x, points[0].y,
+										  points[1].x, points[1].y,
+										  points[2].x, points[2].y);
+					didClosePath = NO;
+					break;
+					
 				case NSClosePathBezierPathElement:
-				CGPathCloseSubpath(path);
-				didClosePath = YES;
-				break;
+					CGPathCloseSubpath(path);
+					didClosePath = YES;
+					break;
 			}
 		}
-
+		
 		// Be sure the path is closed or Quartz may not do valid hit detection.
 		if (!didClosePath)
 			CGPathCloseSubpath(path);
-
+		
 		immutablePath = CGPathCreateCopy(path);
 		CGPathRelease(path);
 	}
-
+	
 	return immutablePath;
 }
 @end
@@ -100,20 +100,20 @@ int cap (int min, int val, int max)
 	{
 		cRadius = lesserDim / 2;
 	}
-
+	
 	//these points describe the rectangle as start and stop points of the
 	//arcs making up its corners --points c, e, & g are implicit endpoints of arcs
 	//and are unnecessary
 	NSPoint a = NSMakePoint( 0, cRadius ), b = NSMakePoint( 0, height - cRadius ),
-		d = NSMakePoint( width - cRadius, height ), f = NSMakePoint( width, cRadius ),
-		h = NSMakePoint( cRadius, 0 );
-
+	d = NSMakePoint( width - cRadius, height ), f = NSMakePoint( width, cRadius ),
+	h = NSMakePoint( cRadius, 0 );
+	
 	//these points describe the center points of the corner arcs
 	NSPoint cA = NSMakePoint( cRadius, height - cRadius ),
-		cB = NSMakePoint( width - cRadius, height - cRadius ),
-		cC = NSMakePoint( width - cRadius, cRadius ),
-		cD = NSMakePoint( cRadius, cRadius );
-			
+	cB = NSMakePoint( width - cRadius, height - cRadius ),
+	cC = NSMakePoint( width - cRadius, cRadius ),
+	cD = NSMakePoint( cRadius, cRadius );
+	
 	//start
 	NSBezierPath *bp = [NSBezierPath bezierPath];
 	[bp moveToPoint: a ];
@@ -126,12 +126,12 @@ int cap (int min, int val, int max)
 	[bp lineToPoint: h ];
 	[bp appendBezierPathWithArcWithCenter: cD radius: cRadius startAngle:270 endAngle:180 clockwise: YES];	
 	[bp closePath];
-
+	
 	//Transform path to rectangle's origin
 	NSAffineTransform *transform = [NSAffineTransform transform];
 	[transform translateXBy: left yBy: bottom];
 	[bp transformUsingAffineTransform: transform];
-
+	
 	return bp; //it's already been autoreleased
 }
 @end
@@ -150,7 +150,7 @@ int cap (int min, int val, int max)
 - (id)initWithDataSource:(id)theDataSource
 {
 	dataSource = theDataSource;
-
+	
 	if(self = [self initWithFrame:NSZeroRect])
 	{
 		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(viewFrameDidChange:) name:NSViewFrameDidChangeNotification object:self];
@@ -187,7 +187,7 @@ int cap (int min, int val, int max)
 		tinfo.options             = kHIThemeTextBoxOptionNone;
 		tinfo.truncationPosition  = kHIThemeTextTruncationEnd;
 		tinfo.truncationMaxLines  = 1;
-
+		
 		if([[self items] count]>0)
 		{
 			for(int i=0; i<[[self items] count]; i++)
@@ -195,7 +195,7 @@ int cap (int min, int val, int max)
 				NSString* text = [[[self items] objectAtIndex:i] objectForKey:@"display"];
 				float width;
 				HIThemeGetTextDimensions((CFStringRef)text, 600, &tinfo, &width, NULL, NULL);
-
+				
 				if(width > maxWidth)
 					maxWidth = width;
 			}
@@ -226,13 +226,13 @@ int cap (int min, int val, int max)
 
 - (void)drawRect:(NSRect)rect
 {		
-
+	
 	CGContextRef cgContext = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
 	HIRect bounds          = NSRectToCGRect([self bounds]);
-
+	
 	// TODO switch to HIThemeGetMenuBackgroundShape() for this
 	CGPathRef menuPath = [[NSBezierPath bezierPathWithRoundedRect:[self bounds] cornerRadius:5.0] quartzPath];
-
+	
 	// Draw the menu background, clipped to the rounded rectangle
 	HIThemeMenuDrawInfo drawInfo;
 	drawInfo.version = 0;
@@ -240,15 +240,15 @@ int cap (int min, int val, int max)
 	CGContextAddPath(cgContext, menuPath);
 	CGContextClip(cgContext);
 	HIThemeDrawMenuBackground(&bounds, &drawInfo, cgContext, kHIThemeOrientationNormal);
-
+	
 	// Add a border around the menu
 	CGContextAddPath(cgContext, menuPath);
 	CGContextSetRGBStrokeColor(cgContext, 0.8, 0.8, 0.8, 1.0);
 	CGContextSetLineWidth(cgContext, 1.0);
 	CGContextStrokePath(cgContext);
-
+	
 	float y = [self bounds].size.height - [self rowHeight];
-
+	
 	if([self showUpArrow])
 	{
 		HIRect arrowBounds      = bounds;
@@ -275,7 +275,7 @@ int cap (int min, int val, int max)
 		HIThemeDrawMenuItem(&hiRowRect, &hiRowRect, &aMenuItemDrawInfo, cgContext, kHIThemeOrientationNormal, NULL);
 		hiRowRect.origin.x   += TEXT_INDENT;
 		hiRowRect.size.width -= TEXT_INDENT;
-
+		
 		HIThemeTextInfo tinfo;
 		tinfo.version             = 1;
 		tinfo.state               = kThemeMenuActive;
@@ -285,18 +285,18 @@ int cap (int min, int val, int max)
 		tinfo.options             = kHIThemeTextBoxOptionNone;
 		tinfo.truncationPosition  = kHIThemeTextTruncationEnd;
 		tinfo.truncationMaxLines  = 1;
-
+		
 		NSFont* font = [NSFont fontWithName:[[NSUserDefaults standardUserDefaults] stringForKey:@"OakTextViewNormalFontName"]  ?: [[NSFont userFixedPitchFontOfSize:12.0] fontName]
-                                     size:[[NSUserDefaults standardUserDefaults] integerForKey:@"OakTextViewNormalFontSize"] ?: 12 ];
+									   size:[[NSUserDefaults standardUserDefaults] integerForKey:@"OakTextViewNormalFontSize"] ?: 12 ];
 		[text drawInRect:NSRectFromCGRect(hiRowRect)
-        withAttributes:[NSDictionary dictionaryWithObjectsAndKeys:
-									((aMenuItemDrawInfo.state == kThemeMenuSelected) ? [NSColor selectedMenuItemTextColor] : [NSColor blackColor]), NSForegroundColorAttributeName,
-									font, NSFontAttributeName,
-									nil]];
-
+		  withAttributes:[NSDictionary dictionaryWithObjectsAndKeys:
+						  ((aMenuItemDrawInfo.state == kThemeMenuSelected) ? [NSColor selectedMenuItemTextColor] : [NSColor blackColor]), NSForegroundColorAttributeName,
+						  font, NSFontAttributeName,
+						  nil]];
+		
 		y -= [self rowHeight];
 	}
-
+	
 	if([self showDownArrow])
 	{
 		HIRect arrowBounds      = bounds;
@@ -307,14 +307,14 @@ int cap (int min, int val, int max)
 		aMenuItemDrawInfo.state    = kThemeMenuActive;
 		HIThemeDrawMenuItem(&arrowBounds, &arrowBounds, &aMenuItemDrawInfo, cgContext, kHIThemeOrientationNormal, NULL);
 	}
-
+	
 	CGPathRelease(menuPath);
 	menuPath = NULL;
 	[self newSelectionOccured];
-
+	
 }
 
--(int)selectedRow {
+- (int)selectedRow {
 	for(int i = visibleOffset; i < visibleOffset + visibleItemsCount; ++i)
 	{
 		NSDictionary* item = [[self items] objectAtIndex:i];
@@ -347,7 +347,7 @@ int cap (int min, int val, int max)
 	return selectedItem;
 }
 
-- (void) arrangeInitialSelection
+- (void)arrangeInitialSelection
 {
 	selectedItem = [[self items] objectAtIndex:0];
 	[self setNeedsDisplay:YES];
@@ -366,7 +366,7 @@ int cap (int min, int val, int max)
 		int newVisibleOffset = visibleOffset;
 		int index            = ([self bounds].size.height - cursor.y) / [self rowHeight];
 		if(index < 0) return;
-
+		
 		if([self showUpArrow])
 		{
 			if(index == 0)
@@ -409,7 +409,7 @@ int cap (int min, int val, int max)
 		{ NSHomeFunctionKey,          -(INT_MAX >> 1) },
 		{ NSEndFunctionKey,           +(INT_MAX >> 1) },
 	};
-
+	
 	unichar keyCode = 0;
 	if([anEvent type] == NSScrollWheel)
 		keyCode = [anEvent deltaY] >= 0.0 ? NSUpArrowFunctionKey : NSDownArrowFunctionKey;
@@ -420,7 +420,7 @@ int cap (int min, int val, int max)
 		[self mouseMoved:anEvent];
 		return YES;
 	}
-
+	
 	for(size_t i = 0; i < sizeofA(key_movements); ++i)
 	{
 		if(keyCode == key_movements[i].key)
@@ -439,12 +439,12 @@ int cap (int min, int val, int max)
 			return YES;
 		}
 	}
-
+	
 	return NO;
 }
 - (void)newSelectionOccured{
-  if([[self delegate] respondsToSelector:@selector(viewDidChangeSelection)])
-    [[self delegate] viewDidChangeSelection];
+	if([[self delegate] respondsToSelector:@selector(viewDidChangeSelection)])
+		[[self delegate] viewDidChangeSelection];
 }
 - (id)delegate { return delegate; }
 - (void)setDelegate:(id)del { delegate = del; }

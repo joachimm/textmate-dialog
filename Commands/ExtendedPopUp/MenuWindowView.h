@@ -31,5 +31,5 @@
 - (id)delegate;
 - (void)setDelegate:(id)del;
 - (BOOL)TMDcanHandleEvent:(NSEvent*)anEvent;
-- (void) arrangeInitialSelection;
+- (void)arrangeInitialSelection;
 @end
