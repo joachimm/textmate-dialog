@@ -217,6 +217,7 @@ int cap (int min, int val, int max)
 	frame.origin.y += [self frame].size.height - frame.size.height;
 	[self setFrameSize:frame.size];
 	[[self window] setFrame:frame display:YES animate:NO];
+	[self setNeedsDisplay:YES];
 }
 
 - (NSArray*)items
