@@ -217,6 +217,10 @@ int cap (int min, int val, int max)
 	frame.origin.y += [self frame].size.height - frame.size.height;
 	[self setFrameSize:frame.size];
 	[[self window] setFrame:frame display:YES animate:NO];
+	int i = [self selectedRow];
+	if( (i < visibleOffset) || i > (visibleOffset + visibleItemsCount)){
+		selectedItem = nil;
+	}
 	[self setNeedsDisplay:YES];
 }
 
@@ -262,7 +266,7 @@ int cap (int min, int val, int max)
 		y -= [self rowHeight];
 	}
 	if(selectedItem == nil) {
-		selectedItem = [[self items] objectAtIndex:0];
+		selectedItem = [[self items] objectAtIndex:visibleOffset];
 	}
 	for(int i = visibleOffset; i < visibleOffset + visibleItemsCount; ++i)
 	{
@@ -316,14 +320,7 @@ int cap (int min, int val, int max)
 }
 
 - (int)selectedRow {
-	for(int i = visibleOffset; i < visibleOffset + visibleItemsCount; ++i)
-	{
-		NSDictionary* item = [[self items] objectAtIndex:i];
-		if(item == selectedItem){
-			return i;
-		}
-	}
-	return -1;
+	return [[self items] indexOfObject:selectedItem];
 }
 // - (void)viewDidMoveToWindow
 // {
