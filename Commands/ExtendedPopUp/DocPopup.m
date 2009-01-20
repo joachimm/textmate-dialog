@@ -32,5 +32,10 @@
 - (BOOL)shouldCloseForMousePosition:(NSPoint)aPoint
 {
 	return NO;
-}	
+}
+- (void) close 
+{
+	[[NSNotificationCenter defaultCenter] removeObserver:self name:NSViewFrameDidChangeNotification object:self];
+	[super close];
+}
 @end

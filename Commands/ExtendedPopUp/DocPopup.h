@@ -16,4 +16,5 @@
 + (id)showWithContent:(NSString*)content atLocation:(NSPoint)point transparent:(BOOL)transparent;
 - (void)runUntilUserActivity;
 - (BOOL)shouldCloseForMousePosition:(NSPoint)aPoint;
+- (void)close;
 @end

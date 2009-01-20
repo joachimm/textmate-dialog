@@ -83,7 +83,6 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 			inputHandle = [readFrom retain];
 			[self startReadingDocs];
 		}
-		[[self contentView] arrangeInitialSelection];
 	}
 	return self;
 }
