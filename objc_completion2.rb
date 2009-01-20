@@ -581,7 +581,7 @@ class ObjCMethodCompletion
     end
   end
 
-  def c_popup_gen(c,si,arg_type=nil)
+  def c_popup_gen(c,si)
     s = si.size
     #puts c.inspect.gsub("],", "],\n")
     #c.each {|e| puts e unless e.class == Array}
@@ -683,7 +683,7 @@ class ObjCMethodCompletion
     return fileNames
   end
 
-  def candidate_list(methodSearch, list, types)
+  def candidate_list(methodSearch, list, types, allowEmpty = false)
     unless list.nil?
       obType = list[1]
       list = list[0]
@@ -710,7 +710,7 @@ class ObjCMethodCompletion
           if types == :methods
             n << [l,:methods] if list && list.include?(f[3].split(";")[0])
           else
-            n << [l.strip,types] if list && list.include?(f[2].split("\n"))
+            n << [l.strip,types] if list && list.include?(f[2].rstrip)
           end
           candidates << [l.strip, types]
         end
@@ -720,7 +720,7 @@ class ObjCMethodCompletion
         #candidates += zGrepped.split("\n")
     end
 
-    n = (n.empty? ? candidates : n)
+    n = (n.empty? && !allowEmpty ? candidates : n)
     return n  
   end
 
@@ -756,22 +756,13 @@ class ObjCMethodCompletion
     arg_types = nil
     rules.each do |rule|
       sMn, sCn, sIMn, sTy = rule.split("!")
- #     sCn = nil if sCn.empty?
+      #     sCn = nil if sCn.empty?
       if(mn == sMn && (sCn == "" || (sCn != "" && sCn.split("|").include?(typeName))))
         arg_types = sTy.split("|")
         break
       end
     end
-    if arg_types
-      candidates = []
-      types = [arg_types.to_set]
-      candidates += candidate_list(search, types, :annotated)
-      candidates += candidate_list(search, types, :anonymous)
-      candidates += candidate_list(search, types, :functions)
-      candidates += candidate_list(search, types, :constants)
-      #puts candidates.inspect.gsub(",","\n")
-      res = c_popup_gen(candidates, search, arg_types)
-    else
+    unless arg_types
       candidates = candidate_list(mn, nil, :methods)
       if typeName
         temp = candidates.select do |e|
@@ -781,22 +772,31 @@ class ObjCMethodCompletion
         candidates = temp unless temp.empty?
       end
       arg_types = candidates.map{|e| e[0].split("\t")[5+mn.count(":")]} unless candidates.empty?
-
-      if show_arg && !arg_types.nil?
-        candidates = arg_types.uniq
-      else
-        candidates = []
-      end
-      types = [candidates.to_set]
-      candidates += candidate_list(search, types, :annotated)
-      candidates += candidate_list(search, types, :anonymous)
-      candidates += candidate_list(search, types, :functions)
-      candidates += candidate_list(search, types, :constants)
-#      puts candidates.inspect.gsub(",","\n")
-      TextMate.exit_show_tool_tip "No completion available" if candidates.empty?
-
-      res = c_popup_gen(candidates, search, arg_types)
     end
+
+    types = [arg_types.uniq.to_set]
+
+    candidates = []
+    # run through once allowing lists to be empty
+    candidates += candidate_list(search, types, :annotated, true)
+    candidates += candidate_list(search, types, :anonymous, true)
+    candidates += candidate_list(search, types, :functions, true)
+    candidates += candidate_list(search, types, :constants, true)
+
+    # if all runs were empty, do them again and append all
+    if candidates.empty?
+      candidates += candidate_list(search, nil, :annotated)
+      candidates += candidate_list(search, nil, :anonymous)
+      candidates += candidate_list(search, nil, :functions)
+      candidates += candidate_list(search, nil, :constants)
+    end
+
+    if show_arg
+      candidates.insert(0, arg_types)
+    end
+    #      puts candidates.inspect.gsub(",","\n")
+    TextMate.exit_show_tool_tip "No completion available" if candidates.empty?
+    res = c_popup_gen(candidates, search)
   end
 
 
