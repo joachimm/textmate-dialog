@@ -769,9 +769,10 @@ class ObjCMethodCompletion
           c = e[0].split("\t")[3].match(/[A-Za-z0-9_]+/)[0]
           c == typeName
         end
-        candidates = temp unless temp.empty?
+        candidates = temp unless temp.empty?        
       end
-      arg_types = candidates.map{|e| e[0].split("\t")[5+mn.count(":")]} unless candidates.empty?
+      arg_types = candidates.map{|e| e[0].split("\t")[5+mn.count(":")]}
+      
     end
 
     types = [arg_types.uniq.to_set]
@@ -792,7 +793,7 @@ class ObjCMethodCompletion
     end
 
     if show_arg
-      candidates.insert(0, arg_types)
+      candidates.insert(0, *arg_types)
     end
     #      puts candidates.inspect.gsub(",","\n")
     TextMate.exit_show_tool_tip "No completion available" if candidates.empty?
