@@ -21,6 +21,7 @@
 	// Non-retained
 	id dataSource;
 	id selectedItem;
+	id previousSelected;
   id delegate;
 }
 - (id)initWithDataSource:(id)theDataSource;

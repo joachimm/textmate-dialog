@@ -100,23 +100,25 @@ module TextMate
         %x{ #{command} }
       end
       
-      def handleSelections(io, docTool, block)
+      def handleSelections(io, docTool, block, semaphore)
         r = nil
         begin
           line = io.each("\000") do |l|
             r = OSX::PropertyList.load l[0...-1]
-            if r.has_key?("callback")
-              to_insert = block.call(r).to_s
-              io.write to_insert
-              io.putc 1;
-            else
-              text = docTool.call(r)
-              if text
-                io.write "<pre>#{ text }</pre>" 
+            semaphore.synchronize do
+              if r.has_key?("callback")
+                to_insert = block.call(r).to_s
+                io.write to_insert
+                io.putc 1;
               else
-                                io.putc 0
+                text = docTool.call(r)
+                if text
+                  io.write "<pre>#{ text }</pre>" 
+                else
+                  io.putc 0
+                end
+                io.putc 0
               end
-                              io.putc 0
             end
           end
 
@@ -168,8 +170,8 @@ module TextMate
           options[:initial_filter] ||= Word.current_word characters, :left
 
           choices         = choices.map! {|c| {'display' => c.to_s} } unless choices[0].is_a? Hash
-          plist           = {'suggestions' => choices}
-          plist['images'] = options[:images] if options[:images]
+          #plist           = {'suggestions' => choices}
+          #plist['images'] = options[:images] if options[:images]
 
           to_insert = ''
           result    = nil
@@ -184,8 +186,20 @@ module TextMate
             if docTool
               command << " --displayDocumentation"
               ::IO.popen(command, 'w+') do |io|
-                io << ( plist.to_plist + "\0")
-                to_insert = handleSelections(io, docTool, block)
+                require 'thread'
+                semaphore = Mutex.new
+                
+                fork do
+                  choices.each do |choice|
+                    semaphore.synchronize do
+                      io << ( choice.to_plist + "\2\0")
+                    end
+                  end
+                  semaphore.synchronize do
+                    io.putc 3
+                  end
+                end
+                to_insert = handleSelections(io, docTool, block, semaphore)
               end
             else
               ::IO.popen(command, 'w+') do |io|

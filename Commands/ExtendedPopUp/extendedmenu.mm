@@ -23,7 +23,7 @@
 
 - (void)handleCommand:(CLIProxy*)proxy
 {
-	NSDictionary* args = [proxy parameters];
+	NSDictionary* args = [proxy parametersIncludingStandardInput:NO];
 	
 	NSString* filter     = [args objectForKey:@"alreadyTyped"];
 	NSString* prefix     = [args objectForKey:@"staticPrefix"];
@@ -31,11 +31,12 @@
 	BOOL wait            = [args objectForKey:@"returnChoice"] ? YES : NO;
 	BOOL documented      = [args objectForKey:@"displayDocumentation"] ? YES : NO;
 	BOOL caseInsensitive = [args objectForKey:@"caseInsensitive"] ? YES : NO;
-	
+/*	
 	NSArray* suggestions = [args objectForKey:@"suggestions"];
 	if([suggestions isKindOfClass:[NSString class]])
 		suggestions = [NSPropertyListSerialization propertyListFromData:[(NSString*)suggestions dataUsingEncoding:NSUTF8StringEncoding] mutabilityOption:NSPropertyListImmutable format:nil errorDescription:NULL];
-
+*/
+	NSMutableArray* suggestions = [NSMutableArray array];
 	TMDIncrementalPopUpMenu* xPopUp = [[TMDIncrementalPopUpMenu alloc] initWithItems:suggestions
    alreadyTyped:filter
    staticPrefix:prefix

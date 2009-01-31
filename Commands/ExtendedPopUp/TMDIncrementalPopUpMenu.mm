@@ -11,7 +11,14 @@
 #import "MenuWindowView.h"
 #import <vector>
 
+enum stringterminators {
+	DOCUMENTATION_TERMINATOR,
+	INSERT_SNIPPET_TERMINATOR,
+	ADD_SUGGESTION_TERMINATOR,
+	END_OF_SUGGESTIONS_TERMINATOR,
 
+
+};
 
 @interface TMDIncrementalPopUpMenu (Private)
 - (NSRect)rectOfMainScreen;
@@ -20,11 +27,12 @@
 - (void)filter;
 - (void)insertCommonPrefix;
 - (void)completeAndInsertSnippet;
-- (void)startReadingDocs;
+- (void)startReadingStandardInput;
 - (void)stopProcess;
 - (void)closeHTMLPopup;
 - (void)writeNullTerminatedString:(NSString*)string;
 - (void)setFiltered:(NSArray*)array;
+-(void)appendDataToArray:(NSString*)string;
 @end
 
 @implementation TMDIncrementalPopUpMenu
@@ -61,7 +69,7 @@
 	[super dealloc];
 }
 
-- (id)initWithItems:(NSArray*)someSuggestions alreadyTyped:(NSString*)aUserString staticPrefix:(NSString*)aStaticPrefix additionalWordCharacters:(NSString*)someAdditionalWordCharacters caseSensitive:(BOOL)isCaseSensitive writeChoiceToFileDescriptor:(NSFileHandle*)aFileDescriptor
+- (id)initWithItems:(NSMutableArray*)someSuggestions alreadyTyped:(NSString*)aUserString staticPrefix:(NSString*)aStaticPrefix additionalWordCharacters:(NSString*)someAdditionalWordCharacters caseSensitive:(BOOL)isCaseSensitive writeChoiceToFileDescriptor:(NSFileHandle*)aFileDescriptor
 readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 {
 	if(self = [self init])
@@ -81,7 +89,7 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 		outputHandle = [aFileDescriptor retain];
 		if(readFrom) {
 			inputHandle = [readFrom retain];
-			[self startReadingDocs];
+			[self startReadingStandardInput];
 		}
 	}
 	return self;
@@ -142,7 +150,7 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 		return;
 	// unless we have an input handle, writing on the outputHandle is pointless, 
 	// since we won't get anything in return.
-	if(outputHandle && inputHandle)
+	if(outputHandle && inputHandle && doneLoadingSuggestions)
 	{
 		[self writeNullTerminatedString:[selectedItem description]];
 	}
@@ -177,8 +185,9 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 // = Pipeing =
 // ===========
 
-- (void)startReadingDocs
+- (void)startReadingStandardInput
 {
+	doneLoadingSuggestions = NO;
 	[[NSNotificationCenter defaultCenter] addObserver:self 
 											 selector:@selector(getData:) 
 												 name: NSFileHandleReadCompletionNotification 
@@ -194,50 +203,72 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
     {
 		int i = 0;
 		int index = -1;
-		int length = [data length]; 
+		int length = [data length];
+		int previousIndex = 0;
 		char ch;
 		char* charArray = (char*) [data bytes];
-		while(i < length - 1) {
+		
+		if([data length] == 1 && charArray[0] == 0 && [htmlDocString length] == 0){
+			[self closeHTMLPopup];
+		}
+		
+		while(i < length ) {
 			ch = charArray[i];
 			// if the null terminator is not at the end, assume that new data
 			// has been sent afterwards, and use that instead
-			if(ch == 0 || ch == 1){
+			if(ch == 0 || ch == 1 || ch == 2 || ch == 3){
 				index = i;
+				charArray[index] = 0;
+				
+				data = [NSData dataWithBytes: (charArray +previousIndex) length:index - previousIndex];
+				NSString* html =  [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+				[htmlDocString appendString:html];
+				[html release];
+					
+				if(ch == END_OF_SUGGESTIONS_TERMINATOR) {
+				    doneLoadingSuggestions = YES;
+					[self viewDidChangeSelection];
+				} else if(ch == ADD_SUGGESTION_TERMINATOR) {
+					[self appendDataToArray:htmlDocString];
+					[htmlDocString setString:@""];
+				} else if (ch == INSERT_SNIPPET_TERMINATOR) { // implicit ch == 1
+					[self stopProcess];
+					insert_snippet(htmlDocString);// substringToIndex:[data length]-1]);
+					return;
+
+				// if the null terminator is not at the end, assume that new data
+				// has been sent afterwards, and use that instead		
+				} else if (ch == DOCUMENTATION_TERMINATOR) { // implicit ch == 0
+					if(doneLoadingSuggestions){
+						[self displayHTMLPopup:htmlDocString];
+					}
+					[htmlDocString setString:@""];
+				} 
+				previousIndex = index + 1;
 			}
 			i++;
 		}
-        // data might not be null terminated so use
-        // -initWithData:encoding: 
-		
-		if(index != -1) {
-			index++; // we want to start at the positon after index
-			data = [NSData dataWithBytes: (charArray + index ) length:length - index];
-			[htmlDocString setString:@""];
-
-		}
-		// it seems that NSString#initWithData:encoding:
-		// does not give an empty string when data is -> char* data[1]; data[0]=0;
-		if([data length] == 1 && *charArray == 0 && [htmlDocString length] == 0){
-			[self closeHTMLPopup];
-		} else {
+		if(previousIndex != length ){
+			data = [NSData dataWithBytes: (charArray +previousIndex ) length:length - previousIndex];
 			NSString* html =  [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
 			[htmlDocString appendString:html];
-		
-			// if the string is terminated with a 0 it is documentation
-			// ch is the last char in the input
-			if( charArray[length - 1] == 0 ){
-				[self displayHTMLPopup:htmlDocString];
-				[htmlDocString setString:@""];
-				// if the string is terminated with a 1 it is a snippet
-			} else if( charArray[length - 1] == 1 ){
-				[self stopProcess];
-				insert_snippet([htmlDocString substringToIndex:[data length]-1]);
-			} 
 			[html release];
 		}
+
+
 	}
 	// read more data    
 	[inputHandle readInBackgroundAndNotify];  
+}
+
+-(void)appendDataToArray:(NSString*)string
+{
+	NSDictionary* s = [NSPropertyListSerialization propertyListFromData:[string dataUsingEncoding:NSUTF8StringEncoding] mutabilityOption:NSPropertyListImmutable format:nil errorDescription:NULL];
+	@synchronized(suggestions){
+		[suggestions addObject:s];
+	}
+	[self filter];
+	
 }
 
 - (void)stopProcess
@@ -263,11 +294,16 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 			predicate = [NSPredicate predicateWithFormat:@"match BEGINSWITH %@ OR (match == NULL AND display BEGINSWITH %@)", [self filterString], [self filterString]];
 		else
 			predicate = [NSPredicate predicateWithFormat:@"match BEGINSWITH[c] %@ OR (match == NULL AND display BEGINSWITH[c] %@)", [self filterString], [self filterString]];
+		@synchronized(suggestions){
+
 		newFiltered = [suggestions filteredArrayUsingPredicate:predicate];
-	}
+		}
+		}
 	else
-	{
+	{@synchronized(suggestions){
+
 		newFiltered = suggestions;
+	}
 	}
 
 	[self setFiltered:newFiltered];
@@ -466,8 +502,11 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 	{
 		// We want to return the index of the selected item into the array which was passed in,
 		// but we can’t use the selected row index as the contents of the tableview is filtered down.
+		@synchronized(suggestions){
+
 		[selectedItem setObject:[NSNumber numberWithInt:[suggestions indexOfObject:[filtered objectAtIndex:[[self contentView] selectedRow]]]] forKey:@"index"];
-		if(inputHandle){
+		}
+			if(inputHandle){
 			[selectedItem setObject:@"insertSnippet" forKey:@"callback"];
 			[self writeNullTerminatedString:[selectedItem description]];
 		} else {

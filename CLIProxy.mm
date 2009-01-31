@@ -46,13 +46,20 @@
 
 - (NSDictionary*)parameters
 {
+	return [self parametersIncludingStandardInput:YES];
+}
+
+- (NSDictionary*)parametersIncludingStandardInput:(BOOL)standardInput
+{
 	if(!parameters)
 	{
 		NSMutableDictionary* res = [NSMutableDictionary dictionary];
-		if(id plist = [TMDCommand readPropertyList:[self inputHandle] error:NULL])
-		{
-			if([plist isKindOfClass:[NSDictionary class]])
-				res = plist;
+		if(standardInput) {
+			if(id plist = [TMDCommand readPropertyList:[self inputHandle] error:NULL])
+			{
+				if([plist isKindOfClass:[NSDictionary class]])
+					res = plist;
+			}
 		}
 
 		NSString* lastKey = nil;

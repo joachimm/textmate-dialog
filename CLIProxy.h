@@ -32,6 +32,7 @@
 - (id)readPropertyListFromInput;
 
 - (NSDictionary*)parameters;
+- (NSDictionary*)parametersIncludingStandardInput:(BOOL)standardInput;
 
 - (NSFileHandle*)inputHandle;
 - (NSFileHandle*)outputHandle;

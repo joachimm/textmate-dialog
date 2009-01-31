@@ -16,7 +16,7 @@
 {
 	NSFileHandle* outputHandle;
 	NSFileHandle* inputHandle;
-	NSArray* suggestions;
+	NSMutableArray* suggestions;
 	NSMutableString* mutablePrefix;
 	NSMutableString* htmlDocString;
 	NSString* staticPrefix;
@@ -27,10 +27,11 @@
 	BOOL isAbove;
 	BOOL closeMe;
 	BOOL caseSensitive;
+	BOOL doneLoadingSuggestions;
 
 	NSMutableCharacterSet* textualInputCharacters;	
 }
-- (id)initWithItems:(NSArray*)someSuggestions alreadyTyped:(NSString*)aUserString staticPrefix:(NSString*)aStaticPrefix additionalWordCharacters:(NSString*)someAdditionalWordCharacters caseSensitive:(BOOL)isCaseSensitive writeChoiceToFileDescriptor:(NSFileHandle*)aFileDescriptor
+- (id)initWithItems:(NSMutableArray*)someSuggestions alreadyTyped:(NSString*)aUserString staticPrefix:(NSString*)aStaticPrefix additionalWordCharacters:(NSString*)someAdditionalWordCharacters caseSensitive:(BOOL)isCaseSensitive writeChoiceToFileDescriptor:(NSFileHandle*)aFileDescriptor
 readHTMLFromFileDescriptor:(NSFileHandle*)readFrom;
 - (void)setCaretPos:(NSPoint)aPos;
 @end

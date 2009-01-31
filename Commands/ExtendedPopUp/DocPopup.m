@@ -38,4 +38,10 @@
 	[[NSNotificationCenter defaultCenter] removeObserver:self name:NSViewFrameDidChangeNotification object:self];
 	[super close];
 }
+
+- (void)webView:(WebView*)sender didFinishLoadForFrame:(WebFrame*)frame;
+{
+	[self sizeToContent];
+	[self orderFront:self];
+}
 @end

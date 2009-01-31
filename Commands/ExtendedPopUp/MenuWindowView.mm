@@ -315,7 +315,9 @@ int cap (int min, int val, int max)
 	
 	CGPathRelease(menuPath);
 	menuPath = NULL;
+	if(previousSelected != selectedItem)
 	[self newSelectionOccured];
+	previousSelected = selectedItem;
 	
 }
 
