@@ -105,22 +105,22 @@ module TextMate
         begin
           line = io.each("\000") do |l|
             r = OSX::PropertyList.load l[0...-1]
-            semaphore.synchronize do
               if r.has_key?("callback")
                 to_insert = block.call(r).to_s
-                io.write to_insert
-                io.putc 1;
+                semaphore.synchronize do
+                  io.putc 0;
+                  io.write to_insert
+                  io.putc 1;
+                end
               else
                 text = docTool.call(r)
-                if text
-                  io.write "<pre>#{ text }</pre>" 
-                else
+                semaphore.synchronize do
+                
+                  io.write "<pre>#{ text }</pre>" if text
                   io.putc 0
                 end
-                io.putc 0
               end
             end
-          end
 
         rescue Exception => e
           file = open(ENV["HOME"] + "exceptionHandleSelection.txt","w+")
@@ -192,7 +192,7 @@ module TextMate
                 fork do
                   choices.each do |choice|
                     semaphore.synchronize do
-                      io << ( choice.to_plist + "\2\0")
+                      io << ( choice.to_plist + "\2")
                     end
                   end
                   semaphore.synchronize do

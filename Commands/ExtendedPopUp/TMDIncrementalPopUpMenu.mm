@@ -216,7 +216,10 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 			ch = charArray[i];
 			// if the null terminator is not at the end, assume that new data
 			// has been sent afterwards, and use that instead
-			if(ch == 0 || ch == 1 || ch == 2 || ch == 3){
+			if(ch == END_OF_SUGGESTIONS_TERMINATOR ||
+			   ch == ADD_SUGGESTION_TERMINATOR ||
+			   ch == INSERT_SNIPPET_TERMINATOR ||
+			   ch == DOCUMENTATION_TERMINATOR){
 				index = i;
 				charArray[index] = 0;
 				
@@ -234,6 +237,7 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 				} else if (ch == INSERT_SNIPPET_TERMINATOR) { // implicit ch == 1
 					[self stopProcess];
 					insert_snippet(htmlDocString);// substringToIndex:[data length]-1]);
+					if(!doneLoadingSuggestions) [self close];
 					return;
 
 				// if the null terminator is not at the end, assume that new data
@@ -503,10 +507,9 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 		// We want to return the index of the selected item into the array which was passed in,
 		// but we can’t use the selected row index as the contents of the tableview is filtered down.
 		@synchronized(suggestions){
-
-		[selectedItem setObject:[NSNumber numberWithInt:[suggestions indexOfObject:[filtered objectAtIndex:[[self contentView] selectedRow]]]] forKey:@"index"];
+			[selectedItem setObject:[NSNumber numberWithInt:[suggestions indexOfObject:[filtered objectAtIndex:[[self contentView] selectedRow]]]] forKey:@"index"];
 		}
-			if(inputHandle){
+		if(inputHandle){
 			[selectedItem setObject:@"insertSnippet" forKey:@"callback"];
 			[self writeNullTerminatedString:[selectedItem description]];
 		} else {
