@@ -35,6 +35,7 @@
 }
 - (void) close 
 {
+	[webView setFrameLoadDelegate:nil];
 	[[NSNotificationCenter defaultCenter] removeObserver:self name:NSViewFrameDidChangeNotification object:self];
 	[super close];
 }
