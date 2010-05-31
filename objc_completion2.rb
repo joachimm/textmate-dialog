@@ -5,6 +5,8 @@ require "#{ENV['TM_SUPPORT_PATH']}/lib/escape"
 require "zlib"
 require "set"
 require "#{ENV['TM_SUPPORT_PATH']}/lib/ui"
+require "#{ENV['TM_BUNDLE_SUPPORT']}/docserver"
+
 
 
 class ExternalSnippetizer
@@ -338,7 +340,7 @@ class ObjCFallbackCompletion
       flags[:initial_filter]= searchTerm
       begin
         
-        TextMate::UI.complete(pl, flags, nil)  do |hash|           
+        TextMate::UI.complete(pl, flags)  do |hash|           
           es = ExternalSnippetizer.new({:star => star,
                :arg_name => arg_name,
                :tm_C_pointer => ENV['TM_C_POINTER']})
@@ -603,65 +605,31 @@ class ObjCMethodCompletion
     end
   end
 
-  def generateOBJCDocumentation
-    lambda do |selection|
-      begin
-        docset_cmd = "/Developer/usr/bin/docsetutil search -skip-text -query "
-        docset =  "/Developer/Documentation/DocSets/com.apple.adc.documentation.AppleSnowLeopard.CoreReference.docset"
-        methodName = selection["cand"].split("\t")[0]
-        object = selection["cand"].split("\t")[3].match(/^[^;]+/)[0]
-
-
-
-        cmd = docset_cmd + methodName + ' ' + docset
-        result = `#{cmd} 2>&1`
-        
-        status = $?
-        return result if status.exitstatus != 0
-        
-        firstLine = result.split("\n")[0]
-        urlPart = firstLine.split[1]
-        path, anchor = urlPart.split("\#")
-
-        url = docset + "/Contents/Resources/Documents/" + path
-        str = open(url, "r").read
-        
-        searchTerm = "<a name=\"#{anchor}\""
-        startIndex = str.index(searchTerm)
-        return str if startIndex.nil?
-        endIndex = str.index("<a name=\"//apple_ref/occ/", startIndex + searchTerm.length)
-        unless(startIndex && endIndex )
-          return "nil"
-        else
-          open("/tmp/deb.txt", "w+") do |f|
-            f.puts str[startIndex...endIndex]
-            f.puts "-"*25
-            f.puts selection.inspect
-          end
-          return str[startIndex...endIndex]
-        end
-      rescue Exception => e
-        return "error when generating documentation>" + selection.inspect + e.message + e.backtrace.inspect + methodName + ">>>"+object + url
-      end
-    end
-  end
-
   def show_dialog(prettyCandidates,start,static,word)
     pl = prettyCandidates.map do |pretty, filter, full, type | 
-            { 'display' => pretty, 'cand' => full, 'match'=> filter, 'type'=> type.to_s}
+            { 'display' => pretty, 'cand' => full, 'match'=> filter, 'type'=> type.to_s , 'fallback'=>"http://localhost:10001/#{e_url filter}"}
     end
         
     flags = {}
     flags[:static_prefix] =static
     flags[:extra_chars]= '_:'
     flags[:initial_filter]= word
+    
+    ds = DocServer.new
+    
     begin
-      TextMate::UI.complete(pl, flags, generateOBJCDocumentation()) do |hash|
+      ds.start
+    rescue Exception
+    end
+    
+    begin
+      TextMate::UI.complete(pl, flags) do |hash|
         ExternalSnippetizer.new.run(hash)
       end
     rescue NoMethodError
         TextMate.exit_show_tool_tip "you have Dialog2 installed but not the ui.rb in review"
     end
+    ds.join
     TextMate.exit_discard
   end
 

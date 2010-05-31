@@ -21,10 +21,10 @@
 - (void)filter;
 - (void)insertCommonPrefix;
 - (void)completeAndInsertSnippet;
-- (void)closeHTMLPopup;
 - (void)setFiltered:(NSArray*)array;
 - (void)handleReceivedString;
 - (void)displayDocumentationPopup:(NSString*)html;
+-(void)closeDocumentationPopup;
 @end
 
 NSString* const DOCUMENTATION = @"documentation";
@@ -35,7 +35,6 @@ NSString* const MATCH = @"match";
 NSString* const DISPLAY = @"display";
 
 @implementation TMDIncrementalPopUpMenu
-
 
 // =============================
 // = Setup/tear-down functions =
@@ -153,6 +152,7 @@ NSString* const DISPLAY = @"display";
 		return;
 	// unless we have an input handle, writing on the outputHandle is pointless, 
 	// since we won't get anything in return.
+	[self closeDocumentationPopup];
 
 	  if(NSString* documentation = [selectedItem objectForKey:DOCUMENTATION]){
 	      [self displayDocumentationPopup:documentation];
@@ -165,12 +165,13 @@ NSString* const DISPLAY = @"display";
 // ================================
 // = Documentation Popup handling =
 // ================================
+
 -(void)closeDocumentationPopup
 {
 	if(htmlTooltip != nil){
 		[htmlTooltip close];
-	}
-	
+		htmlTooltip = nil;
+	}	
 }
 
 - (void)displayDocumentationPopup:(NSString*)html
@@ -179,29 +180,25 @@ NSString* const DISPLAY = @"display";
 	NSPoint pos = caretPos;
 	pos.x = pos.x + [self frame].size.width + 5;
 	[self closeDocumentationPopup];
-	  htmlTooltip = [DocPopup showWithContent:html atLocation:pos transparent: NO];
+	htmlTooltip = [DocPopup showWithContent:html atLocation:pos transparent: NO];
 	[html release];
 }
 
-
-
 - (void)handleItemChange:(NSNotification*)notification;
 {
-    NSMutableDictionary* dictionary = [(Fallback*)[notification object] item];
+	Fallback* fallback = (Fallback*)[notification object];
+    NSMutableDictionary* dictionary = [fallback item];
+	[fallback release];
 	
+
 	if(NSString* documentation = [dictionary valueForKey:DOCUMENTATION]){
-		
-		NSNumberFormatter* formatter = [[NSNumberFormatter alloc] init];
-		[formatter setNumberStyle:NSNumberFormatterDecimalStyle];
-		NSNumber* index = [formatter numberFromString:[dictionary valueForKey:INDEX]];
-		[formatter release];
-		
 		NSMutableDictionary* selectedItem = (NSMutableDictionary*)[[self contentView] selectedItem];
 		// if the currently selected item is the same as the received string then display the documentation
-		if(selectedItem != nil && [index isEqualToNumber:[selectedItem valueForKey:INDEX]]){
+		if(selectedItem != nil && [[dictionary objectForKey:INDEX] isEqualToNumber:[selectedItem valueForKey:INDEX]]){
 			[self displayDocumentationPopup:documentation];
 		}		
-	}
+	}	
+
 }
 
 // ====================
@@ -256,15 +253,6 @@ NSString* const DISPLAY = @"display";
 			mainScreen = [candidate frame];
 	}
 	return mainScreen;
-}
-
-- (void)writeNullTerminatedString:(NSString*)string
-{
-	@synchronized(outputHandle){
-		[outputHandle writeString:string];
-		char c = 0;
-		[outputHandle writeData:[NSData dataWithBytes: &c length: sizeof(char)]];
-	}
 }
 
 // =============================
@@ -361,7 +349,7 @@ NSString* const DISPLAY = @"display";
 			[NSApp sendEvent:event];
 		}
 	}
-	[self closeHTMLPopup];
+	[self closeDocumentationPopup];
 	[self close];
 	
 }

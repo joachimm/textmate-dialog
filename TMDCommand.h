@@ -8,7 +8,6 @@
 
 + (id)readPropertyList:(NSFileHandle*)aFileHandle error:(NSString**)error;
 + (void)writePropertyList:(id)aPlist toFileHandle:(NSFileHandle*)aFileHandle;
-+ (NSData*)readDataUntilNullTerminator:(NSFileHandle*)aFileHandle;
 - (NSString *)commandDescription;
 - (NSString *)usageForInvocation:(NSString *)invocation;
 @end
