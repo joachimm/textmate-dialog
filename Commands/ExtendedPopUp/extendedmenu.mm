@@ -34,7 +34,7 @@
 	
 	NSArray* suggestions = [args objectForKey:@"suggestions"];
 	if([suggestions isKindOfClass:[NSString class]])
-		suggestions = [NSPropertyListSerialization propertyListFromData:[(NSString*)suggestions dataUsingEncoding:NSUTF8StringEncoding] mutabilityOption:NSPropertyListImmutable format:nil errorDescription:NULL];
+		suggestions = [NSPropertyListSerialization propertyListFromData:[(NSString*)suggestions dataUsingEncoding:NSUTF8StringEncoding] mutabilityOption:(documented? NSPropertyListMutableContainersAndLeaves : NSPropertyListImmutable) format:nil errorDescription:NULL];
 
 	TMDIncrementalPopUpMenu* xPopUp = [[TMDIncrementalPopUpMenu alloc] initWithItems:suggestions
    alreadyTyped:filter
@@ -42,7 +42,7 @@
 additionalWordCharacters:allow
   caseSensitive:!caseInsensitive
 writeChoiceToFileDescriptor:(wait ? [proxy outputHandle] : nil)
-readHTMLFromFileDescriptor:(documented ? [proxy inputHandle]: nil)];
+readFromFileDescriptor:(documented ? [proxy inputHandle]: nil)];
 
 	NSPoint pos = [NSEvent mouseLocation];
 	if(id textView = [NSApp targetForAction:@selector(positionForWindowUnderCaret)])

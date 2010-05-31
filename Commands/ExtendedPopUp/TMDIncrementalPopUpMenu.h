@@ -15,10 +15,8 @@
 @interface TMDIncrementalPopUpMenu : NSWindow
 {
 	NSFileHandle* outputHandle;
-	NSFileHandle* inputHandle;
 	NSArray* suggestions;
 	NSMutableString* mutablePrefix;
-	NSMutableString* htmlDocString;
 	NSString* staticPrefix;
 	NSArray* filtered;
 	DocPopup* htmlTooltip;
@@ -30,7 +28,6 @@
 
 	NSMutableCharacterSet* textualInputCharacters;	
 }
-- (id)initWithItems:(NSArray*)someSuggestions alreadyTyped:(NSString*)aUserString staticPrefix:(NSString*)aStaticPrefix additionalWordCharacters:(NSString*)someAdditionalWordCharacters caseSensitive:(BOOL)isCaseSensitive writeChoiceToFileDescriptor:(NSFileHandle*)aFileDescriptor
-readHTMLFromFileDescriptor:(NSFileHandle*)readFrom;
+- (id)initWithItems:(NSArray*)someSuggestions alreadyTyped:(NSString*)aUserString staticPrefix:(NSString*)aStaticPrefix additionalWordCharacters:(NSString*)someAdditionalWordCharacters caseSensitive:(BOOL)isCaseSensitive writeChoiceToFileDescriptor:(NSFileHandle*)aFileDescriptor;
 - (void)setCaretPos:(NSPoint)aPos;
 @end

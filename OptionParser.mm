@@ -24,13 +24,13 @@ struct tokenizer_t
 		enum type_t { option, value, literal, end } type;
 		string word;
 
-		token_t (type_t type = end, NSString* word) : type(type), word([word UTF8String]) { }
+		token_t (type_t type = end, NSString* word = @"") : type(type), word([word UTF8String]) { }
 		token_t (type_t type = end, string word = "") : type(type), word(word) { }
 	};
 
 	token_t current_token;
 
-	tokenizer_t (NSArray* array) : array(array), index(0), state(between_words), did_unget(false), disabled(false) { }
+	tokenizer_t (NSArray* array) : array(array), index(0), state(between_words), did_unget(false), disabled(false), current_token(token_t::end,"") { }
 
 	token_t get (bool expects_argument = false)
 	{
@@ -40,7 +40,7 @@ struct tokenizer_t
 		}
 		else if(index == [array count])
 		{
-			current_token = token_t();
+			current_token = token_t(token_t::end, "");
 		}
 		else if(disabled)
 		{

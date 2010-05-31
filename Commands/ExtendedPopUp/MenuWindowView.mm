@@ -12,14 +12,14 @@
 #import <algorithm>
 
 #define TEXT_INDENT 25
-
+/*
 CGRect NSRectToCGRect(NSRect nsrect) {
 	return (*(CGRect *)&(nsrect));
 }
 NSRect NSRectFromCGRect(CGRect cgrect) {
 	return (*(NSRect *)&(cgrect));
 }
-
+*/
 int cap (int min, int val, int max)
 {
 	return std::min(max, std::max(val, min));

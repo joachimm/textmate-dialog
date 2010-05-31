@@ -105,18 +105,18 @@ module TextMate
         begin
           line = io.each("\000") do |l|
             r = OSX::PropertyList.load l[0...-1]
-            if r.has_key?("callback")
+            if r["request_"] == "insert"
               to_insert = block.call(r).to_s
-              io.write to_insert
-              io.putc 1;
+              r["insert"] = to_insert
+              io.write r.to_plist
+              io.putc 0;
             else
               text = docTool.call(r)
               if text
-                io.write "<pre>#{ text }</pre>" 
-              else
-                                io.putc 0
+                r["documentation"] = "<pre>#{ text }</pre>" 
+                io.write r.to_plist
               end
-                              io.putc 0
+                io.putc 0
             end
           end
 

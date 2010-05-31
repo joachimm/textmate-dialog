@@ -9,7 +9,8 @@
 #import "../../TMDCommand.h" // -writeString:
 #import "../../Dialog2.h"
 #import "MenuWindowView.h"
-#import <vector>
+#import "Fallback.h"
+
 
 
 
@@ -20,14 +21,22 @@
 - (void)filter;
 - (void)insertCommonPrefix;
 - (void)completeAndInsertSnippet;
-- (void)startReadingDocs;
-- (void)stopProcess;
 - (void)closeHTMLPopup;
-- (void)writeNullTerminatedString:(NSString*)string;
 - (void)setFiltered:(NSArray*)array;
+- (void)handleReceivedString;
+- (void)displayDocumentationPopup:(NSString*)html;
 @end
 
+NSString* const DOCUMENTATION = @"documentation";
+NSString* const INSERT = @"insert";
+NSString* const FALLBACK = @"fallback";
+NSString* const INDEX = @"index";
+NSString* const MATCH = @"match";
+NSString* const DISPLAY = @"display";
+
 @implementation TMDIncrementalPopUpMenu
+
+
 // =============================
 // = Setup/tear-down functions =
 // =============================
@@ -36,9 +45,10 @@
 	if(self = [super initWithContentRect:NSZeroRect styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:NO])
 	{
 		mutablePrefix = [NSMutableString new];
-		htmlDocString = [NSMutableString new];
 		textualInputCharacters = [[NSMutableCharacterSet alphanumericCharacterSet] retain];
 		caseSensitive = YES;
+		
+		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleItemChange:) name:TMDItemChangedNotification object:nil];
 		
 		[self setupInterface];	
 	}
@@ -49,25 +59,29 @@
 {
 	[staticPrefix release];
 	[mutablePrefix release];
-	[htmlDocString release];
 	[textualInputCharacters release];
 	
 	[outputHandle release];
 	[suggestions release];
 	
 	[filtered release];
-	[inputHandle release];
+	
+	[[NSNotificationCenter defaultCenter] removeObserver:self];
 	
 	[super dealloc];
 }
 
 - (id)initWithItems:(NSArray*)someSuggestions alreadyTyped:(NSString*)aUserString staticPrefix:(NSString*)aStaticPrefix additionalWordCharacters:(NSString*)someAdditionalWordCharacters caseSensitive:(BOOL)isCaseSensitive writeChoiceToFileDescriptor:(NSFileHandle*)aFileDescriptor
-readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 {
 	if(self = [self init])
 	{
 		suggestions = [someSuggestions retain];
-		
+		int i = 0;
+		for(NSMutableDictionary* item in suggestions)
+		{
+			[item setObject:[NSNumber numberWithInt:i] forKey:INDEX];
+			i++;
+		}
 		if(aUserString)
 			[mutablePrefix appendString:aUserString];
 		
@@ -79,10 +93,7 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 		
 		caseSensitive = isCaseSensitive;
 		outputHandle = [aFileDescriptor retain];
-		if(readFrom) {
-			inputHandle = [readFrom retain];
-			[self startReadingDocs];
-		}
+
 	}
 	return self;
 }
@@ -136,115 +147,61 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 
 - (void)viewDidChangeSelection
 {
-	NSMutableDictionary* selectedItem = [[(NSMutableDictionary*)[[self contentView] selectedItem] mutableCopy] autorelease];
+	NSMutableDictionary* selectedItem = (NSMutableDictionary*)[[self contentView] selectedItem];
 	
 	if(selectedItem == nil)
 		return;
 	// unless we have an input handle, writing on the outputHandle is pointless, 
 	// since we won't get anything in return.
-	if(outputHandle && inputHandle)
-	{
-		[self writeNullTerminatedString:[selectedItem description]];
-	}
+
+	  if(NSString* documentation = [selectedItem objectForKey:DOCUMENTATION]){
+	      [self displayDocumentationPopup:documentation];
+	  } else if ([selectedItem objectForKey:FALLBACK]) {
+		  [Fallback startLookupForItem:selectedItem];
+	  }
+
 }
 
-// =======================
-// = HTML Popup handling =
-// =======================
+// ================================
+// = Documentation Popup handling =
+// ================================
+-(void)closeDocumentationPopup
+{
+	if(htmlTooltip != nil){
+		[htmlTooltip close];
+	}
+	
+}
 
-- (void)displayHTMLPopup:(NSString*)html
+- (void)displayDocumentationPopup:(NSString*)html
 {
 	[html retain];
 	NSPoint pos = caretPos;
 	pos.x = pos.x + [self frame].size.width + 5;
-	[self closeHTMLPopup];
-	@synchronized(htmlTooltip){
+	[self closeDocumentationPopup];
 	  htmlTooltip = [DocPopup showWithContent:html atLocation:pos transparent: NO];
-	}
 	[html release];
 }
 
-- (void)closeHTMLPopup
-{
-	@synchronized(htmlTooltip){
-		if(htmlTooltip != nil){
-			[htmlTooltip close];
-		}
-	}
-}
 
-// ===========
-// = Pipeing =
-// ===========
 
-- (void)startReadingDocs
+- (void)handleItemChange:(NSNotification*)notification;
 {
-	[[NSNotificationCenter defaultCenter] addObserver:self 
-											 selector:@selector(getData:) 
-												 name: NSFileHandleReadCompletionNotification 
-											   object: inputHandle];
-	[inputHandle readInBackgroundAndNotify];
-}
-
-- (void)getData: (NSNotification*)aNotification
-{
-    NSData *data = [[aNotification userInfo] objectForKey:NSFileHandleNotificationDataItem];
-	// assuming there is no way to get zero length data unless EOF?
-    if ([data length])
-    {
-		int i = 0;
-		int index = -1;
-		int length = [data length]; 
-		char ch;
-		char* charArray = (char*) [data bytes];
-		while(i < length - 1) {
-			ch = charArray[i];
-			// if the null terminator is not at the end, assume that new data
-			// has been sent afterwards, and use that instead
-			if(ch == 0 || ch == 1){
-				index = i;
-			}
-			i++;
-		}
-        // data might not be null terminated so use
-        // -initWithData:encoding: 
+    NSMutableDictionary* dictionary = [(Fallback*)[notification object] item];
+	
+	if(NSString* documentation = [dictionary valueForKey:DOCUMENTATION]){
 		
-		if(index != -1) {
-			index++; // we want to start at the positon after index
-			data = [NSData dataWithBytes: (charArray + index ) length:length - index];
-			[htmlDocString setString:@""];
-
-		}
-		// it seems that NSString#initWithData:encoding:
-		// does not give an empty string when data is -> char* data[1]; data[0]=0;
-		if([data length] == 1 && *charArray == 0 && [htmlDocString length] == 0){
-			[self closeHTMLPopup];
-		} else {
-			NSString* html =  [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-			[htmlDocString appendString:html];
+		NSNumberFormatter* formatter = [[NSNumberFormatter alloc] init];
+		[formatter setNumberStyle:NSNumberFormatterDecimalStyle];
+		NSNumber* index = [formatter numberFromString:[dictionary valueForKey:INDEX]];
+		[formatter release];
 		
-			// if the string is terminated with a 0 it is documentation
-			// ch is the last char in the input
-			if( charArray[length - 1] == 0 ){
-				[self displayHTMLPopup:htmlDocString];
-				[htmlDocString setString:@""];
-				// if the string is terminated with a 1 it is a snippet
-			} else if( charArray[length - 1] == 1 ){
-				[self stopProcess];
-				insert_snippet([htmlDocString substringToIndex:[data length]-1]);
-			} 
-			[html release];
-		}
+		NSMutableDictionary* selectedItem = (NSMutableDictionary*)[[self contentView] selectedItem];
+		// if the currently selected item is the same as the received string then display the documentation
+		if(selectedItem != nil && [index isEqualToNumber:[selectedItem valueForKey:INDEX]]){
+			[self displayDocumentationPopup:documentation];
+		}		
 	}
-	// read more data    
-	[inputHandle readInBackgroundAndNotify];  
-}
-
-- (void)stopProcess
-{
-	[[NSNotificationCenter defaultCenter] removeObserver:self name:NSFileHandleReadCompletionNotification object: inputHandle];
-	[self closeHTMLPopup];
-	closeMe = YES;
 }
 
 // ====================
@@ -420,7 +377,7 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 		return;
 	
 	id cur = [filtered objectAtIndex:row];
-	NSString* curMatch = [cur objectForKey:@"match"] ?: [cur objectForKey:@"display"];
+	NSString* curMatch = [cur objectForKey:MATCH] ?: [cur objectForKey:DISPLAY];
 	if([[self filterString] length] + 1 < [curMatch length])
 	{
 		NSString* prefix = [curMatch substringToIndex:[[self filterString] length] + 1];
@@ -428,7 +385,7 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 		for(int i = row; i < [filtered count]; ++i)
 		{
 			id candidate = [filtered objectAtIndex:i];
-			NSString* candidateMatch = [candidate objectForKey:@"match"] ?: [candidate objectForKey:@"display"];
+			NSString* candidateMatch = [candidate objectForKey:MATCH] ?: [candidate objectForKey:DISPLAY];
 			if([candidateMatch hasPrefix:prefix])
 				[candidates addObject:candidateMatch];
 		}
@@ -458,29 +415,19 @@ readHTMLFromFileDescriptor:(NSFileHandle*)readFrom
 	if(selectedItem == nil)
 		return;
 	
-	NSString* candidateMatch = [selectedItem objectForKey:@"match"] ?: [selectedItem objectForKey:@"display"];
+	NSString* candidateMatch = [selectedItem objectForKey:MATCH] ?: [selectedItem objectForKey:DISPLAY];
 	if([[self filterString] length] < [candidateMatch length])
 		insert_text([candidateMatch substringFromIndex:[[self filterString] length]]);
 	
-	if(outputHandle)
-	{
-		// We want to return the index of the selected item into the array which was passed in,
-		// but we can’t use the selected row index as the contents of the tableview is filtered down.
-		[selectedItem setObject:[NSNumber numberWithInt:[suggestions indexOfObject:[filtered objectAtIndex:[[self contentView] selectedRow]]]] forKey:@"index"];
-		if(inputHandle){
-			[selectedItem setObject:@"insertSnippet" forKey:@"callback"];
-			[self writeNullTerminatedString:[selectedItem description]];
-		} else {
-			[outputHandle writeString:[selectedItem description]];
-			closeMe = YES;
-		}
-		
-		
-	} else if(NSString* toInsert = [selectedItem objectForKey:@"insert"])
+	if(NSString* toInsert = [selectedItem objectForKey:INSERT])
 	{
 		insert_snippet(toInsert);
 		closeMe = YES;
-	}
+	} else if(outputHandle)
+	{
+			[outputHandle writeString:[selectedItem description]];
+			closeMe = YES;
+	} 
 	
 }
 @end

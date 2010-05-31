@@ -32,6 +32,7 @@
 		91D6F9940CF33A7A000F8170 /* TMDChameleon.mm in Sources */ = {isa = PBXBuildFile; fileRef = 91D6F9900CF33A7A000F8170 /* TMDChameleon.mm */; };
 		91D6F9950CF33A7A000F8170 /* ValueTransformers.mm in Sources */ = {isa = PBXBuildFile; fileRef = 91D6F9920CF33A7A000F8170 /* ValueTransformers.mm */; };
 		91D6F9960CF33A7A000F8170 /* window.mm in Sources */ = {isa = PBXBuildFile; fileRef = 91D6F9930CF33A7A000F8170 /* window.mm */; };
+		CAC620E411AB384E00ABCCFA /* Fallback.m in Sources */ = {isa = PBXBuildFile; fileRef = CAC620E311AB384E00ABCCFA /* Fallback.m */; };
 		CAD7E01A0F12AC1200E67717 /* MenuWindowView.mm in Sources */ = {isa = PBXBuildFile; fileRef = CAD7E0180F12AC1200E67717 /* MenuWindowView.mm */; };
 		CAD7E2410F1A590300E67717 /* DocPopup.m in Sources */ = {isa = PBXBuildFile; fileRef = CAD7E23F0F1A590300E67717 /* DocPopup.m */; };
 /* End PBXBuildFile section */
@@ -86,6 +87,8 @@
 		91D6F9910CF33A7A000F8170 /* ValueTransformers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ValueTransformers.h; path = Commands/Utilities/ValueTransformers.h; sourceTree = "<group>"; };
 		91D6F9920CF33A7A000F8170 /* ValueTransformers.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = ValueTransformers.mm; path = Commands/Utilities/ValueTransformers.mm; sourceTree = "<group>"; };
 		91D6F9930CF33A7A000F8170 /* window.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = window.mm; path = Commands/window.mm; sourceTree = "<group>"; };
+		CAC620E211AB384E00ABCCFA /* Fallback.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Fallback.h; sourceTree = "<group>"; };
+		CAC620E311AB384E00ABCCFA /* Fallback.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Fallback.m; sourceTree = "<group>"; };
 		CAD7E0180F12AC1200E67717 /* MenuWindowView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = MenuWindowView.mm; path = Commands/ExtendedPopUp/MenuWindowView.mm; sourceTree = "<group>"; };
 		CAD7E0190F12AC1200E67717 /* MenuWindowView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MenuWindowView.h; path = Commands/ExtendedPopUp/MenuWindowView.h; sourceTree = "<group>"; };
 		CAD7E23F0F1A590300E67717 /* DocPopup.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = DocPopup.m; path = Commands/ExtendedPopUp/DocPopup.m; sourceTree = "<group>"; };
@@ -232,6 +235,8 @@
 				91D6F9560CF2BD16000F8170 /* extendedmenu.mm */,
 				91D6F9570CF2BD16000F8170 /* TMDIncrementalPopUpMenu.h */,
 				91D6F9590CF2BD16000F8170 /* TMDIncrementalPopUpMenu.mm */,
+				CAC620E211AB384E00ABCCFA /* Fallback.h */,
+				CAC620E311AB384E00ABCCFA /* Fallback.m */,
 			);
 			name = ExtendedPopUp;
 			sourceTree = "<group>";
@@ -372,6 +377,7 @@
 				1756144D0EDEA96F0053AC52 /* defaults.mm in Sources */,
 				CAD7E01A0F12AC1200E67717 /* MenuWindowView.mm in Sources */,
 				CAD7E2410F1A590300E67717 /* DocPopup.m in Sources */,
+				CAC620E411AB384E00ABCCFA /* Fallback.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -447,7 +453,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				PREBINDING = NO;
-				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
 			};
 			name = Debug;
 		};
@@ -457,7 +463,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				PREBINDING = NO;
-				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
 			};
 			name = Release;
 		};

@@ -512,10 +512,10 @@ class ObjCMethodCompletion
             if arg == "SEL"
               out << name_array[i] + ":${0:SEL} "
             else
-              out << name_array[i] + ":${"+(i+1).to_s + ":"+ arg+"}$0"
+              out << name_array[i] + ":oooo${"+(i+1).to_s + ":"+ arg+"}$0"
             end
           else
-            out << name_array[i] +  ":${"+(i+1).to_s + ":"+ arg+"} "
+            out << name_array[i] +  ":oooo${"+(i+1).to_s + ":"+ arg+"} "
           end
         end
       rescue NoMethodError
@@ -607,38 +607,48 @@ class ObjCMethodCompletion
     lambda do |selection|
       begin
         docset_cmd = "/Developer/usr/bin/docsetutil search -skip-text -query "
-        docset =  "/Developer/Documentation/DocSets/com.apple.ADC_Reference_Library.CoreReference.docset"
+        docset =  "/Developer/Documentation/DocSets/com.apple.adc.documentation.AppleSnowLeopard.CoreReference.docset"
         methodName = selection["cand"].split("\t")[0]
         object = selection["cand"].split("\t")[3].match(/^[^;]+/)[0]
 
 
 
         cmd = docset_cmd + methodName + ' ' + docset
-        result = `#{cmd}`
+        result = `#{cmd} 2>&1`
+        
+        status = $?
+        return result if status.exitstatus != 0
+        
         firstLine = result.split("\n")[0]
         urlPart = firstLine.split[1]
         path, anchor = urlPart.split("\#")
 
         url = docset + "/Contents/Resources/Documents/" + path
-
         str = open(url, "r").read
+        
         searchTerm = "<a name=\"#{anchor}\""
         startIndex = str.index(searchTerm)
+        return str if startIndex.nil?
         endIndex = str.index("<a name=\"//apple_ref/occ/", startIndex + searchTerm.length)
         unless(startIndex && endIndex )
-          return nil
+          return "nil"
         else
+          open("/tmp/deb.txt", "w+") do |f|
+            f.puts str[startIndex...endIndex]
+            f.puts "-"*25
+            f.puts selection.inspect
+          end
           return str[startIndex...endIndex]
         end
-      rescue
-        return "error when generating documentation"
+      rescue Exception => e
+        return "error when generating documentation>" + selection.inspect + e.message + e.backtrace.inspect + methodName + ">>>"+object + url
       end
     end
   end
 
   def show_dialog(prettyCandidates,start,static,word)
     pl = prettyCandidates.map do |pretty, filter, full, type | 
-            { 'display' => pretty, 'cand' => full, 'match'=> filter, 'type'=> type.to_s, 'documented'=>'yes'}
+            { 'display' => pretty, 'cand' => full, 'match'=> filter, 'type'=> type.to_s}
     end
         
     flags = {}
