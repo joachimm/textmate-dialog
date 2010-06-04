@@ -290,7 +290,6 @@ class ObjCFallbackCompletion
     end
   end
 
-
   def pop_up(candidates, searchTerm,star,arg_name)
     start = searchTerm.size
 
@@ -495,8 +494,8 @@ class ObjCMethodCompletion
       out = stuff[0]
     end
     out = "(#{stuff[5].gsub(/ \*/,(ENV['TM_C_POINTER'] || " *").rstrip)})#{out}" unless call || (stuff.size < 4)
-    
-    return [out, filterOn, cand, type]
+    fallback = "http://localhost:10001/?doc=cocoa&method=#{e_url stuff[0]}&class=#{e_url stuff[3]}"
+    return [out, filterOn, cand, type, fallback]
   end
 
   def snippet_generator(cand, start, call)
@@ -606,21 +605,16 @@ class ObjCMethodCompletion
   end
 
   def show_dialog(prettyCandidates,start,static,word)
-    pl = prettyCandidates.map do |pretty, filter, full, type | 
-            { 'display' => pretty, 'cand' => full, 'match'=> filter, 'type'=> type.to_s , 'fallback'=>"http://localhost:10001/#{e_url filter}"}
+    pl = prettyCandidates.map do |pretty, filter, full, type, fallback | 
+            { 'display' => pretty, 'cand' => full, 'match'=> filter, 'type'=> type.to_s , 'fallback'=>fallback}
     end
         
     flags = {}
     flags[:static_prefix] =static
     flags[:extra_chars]= '_:'
     flags[:initial_filter]= word
-    
-    ds = DocServer.new
-    
-    begin
-      ds.start
-    rescue Exception
-    end
+
+    start_documentation_server
     
     begin
       TextMate::UI.complete(pl, flags) do |hash|
@@ -629,10 +623,38 @@ class ObjCMethodCompletion
     rescue NoMethodError
         TextMate.exit_show_tool_tip "you have Dialog2 installed but not the ui.rb in review"
     end
-    ds.join
+
     TextMate.exit_discard
   end
 
+  def start_documentation_server
+    fork do
+       STDOUT.reopen(open('/tmp/nada1',"w+"))
+       STDERR.reopen(open('/tmp/nada2',"w+")) 
+       require 'open-uri'
+       begin
+         open('http://localhost:10001')
+       rescue
+         begin
+
+         DocServer.new
+
+         rescue Exception => e
+
+           open("/tmp/docs.txt", "w+") do |f|
+             f.puts "-"*25
+             f.puts e.message
+           end
+         else
+           open("/tmp/else.txt", "w+") do |f|
+             f.puts "-"*25
+             #f.puts e.message
+           end
+         end
+       end
+     end
+  end
+  
   def candidates_or_exit(methodSearch, list, fileNames)
     x = candidate_list(methodSearch, list, fileNames)
     TextMate.exit_show_tool_tip "No completion available" if x.empty?
